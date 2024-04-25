@@ -4,10 +4,6 @@
 
 基于C++开发的BOT，基于http实现更多可能，本项目为[NiaServer-Core](https://github.com/Nia-Server/NiaServer-Core/releases)子项目
 
-> [!warning]
-> 以下所有api均基于最新构建的版本（见下方RELEASE）
-
-[![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NiaServer-Core?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NiaServer-Core/releases/)
 
 ## 为什么开发？
 
@@ -174,6 +170,11 @@ QQGroup = "123456789"
 
 
 ## HTTP API一览表
+
+> [!warning]
+> 以下所有api均基于最新构建的版本（见下方RELEASE）
+
+[![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NiaServer-Core?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NiaServer-Core/releases/)
 
 ### [POST] `/RunCmd`
 
@@ -730,6 +731,7 @@ world.afterEvents.worldInitialize.subscribe(() => {
 
 ## 许可证
 
-本项目基于[`AGPL-3.0`](https://github.com/NiaServer/NIAHttpBOT/blob/main/LICENSE)开源许可证条款
+本项目基于[`AGPL-3.0`](https://github.com/Nia-Server/NIAHttpBOT/blob/main/LICENSE)开源许可证条款
+
 
 
