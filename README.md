@@ -1,12 +1,8 @@
 # NIAHttpBOT
 
-在NIAHttpBOT v1.5.0正式版发布前，项目地址仍是https://github.com/Nia-Server/NiaServer-Core/tree/dev/NIAHttpBOT
-
-在v1.5.0以后版本子项目才会与源项目分离
-
 ## 简介
 
-使用C++开发的BOT，基于http实现更多可能，本项目为[NiaServer-Core](https://github.com/Nia-Server/NiaServer-Core/releases)子项目
+使用C++开发的BOT，基于http实现更多可能，本项目为[NiaServer-Core](https://github.com/Nia-Server/NiaServer-Core)子项目
 
 
 ## 为什么开发？
