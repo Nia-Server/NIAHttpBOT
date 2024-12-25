@@ -33,7 +33,8 @@ constexpr const char* REMOVE_PATH(const char* str) {
 	<<REMOVE_PATH(__FILE__)<<":"<<__LINE__<<" ("<<__FUNCTION__ \
 	<<")\x1b[0m ==>\n"<<__I18N(a)<<'\n'<<std::endl
 
-#define X(a) __I18N(a)
+#define XX(a) __I18N(a)
+#define XXX(a) XX(a)
 
 inline std::string GetTime() {
 	time_t timep; tm p;

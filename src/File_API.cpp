@@ -7,7 +7,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//检查文件是否存在
 	svr.Post("/CheckFile", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(X("接收到检查文件是否存在的请求，请求检查的文件名称: ") << req.body);
+		INFO(XX("接收到检查文件是否存在的请求，请求检查的文件名称: ") << req.body);
 		std::ifstream file(req.body);
 		res.status = 200;
 		res.set_content(file?"true":"false", "text/plain");
@@ -123,7 +123,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//获取文件数据
 	svr.Post("/GetFileData", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(X("接收到获取文件数据的请求,请求获取的文件名称为： ") << req.body);
+		INFO(XX("接收到获取文件数据的请求,请求获取的文件名称为： ") << req.body);
 		//初始化文件名称
 		std::string fileName = req.body;
 		//判断文件存不存在
@@ -145,7 +145,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//获取json文件数据
 	svr.Post("/GetJsonFileData", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(X("接收到获取文件数据的请求,请求获取的文件名称为： ") << req.body);
+		INFO(XX("接收到获取文件数据的请求,请求获取的文件名称为： ") << req.body);
 		//初始化文件名称
 		std::string fileName = req.body;
 		//判断文件存不存在

@@ -18,6 +18,7 @@ If you have any problems with this project, please contact the authors.
 
 */
 
+
 #include <ctime>
 #include <iostream>
 #include <fstream>
@@ -31,6 +32,7 @@ If you have any problems with this project, please contact the authors.
 #include <unordered_map>
 #include <functional>
 #include <sstream>
+
 
 #ifdef WIN32 //only enable TLS in windows
 #define CPPHTTPLIB_OPENSSL_SUPPORT
@@ -47,6 +49,7 @@ If you have any problems with this project, please contact the authors.
 #include <rapidjson/istreamwrapper.h>
 
 
+
 #include "CFG_Parser.hpp"
 #include "I18Nize.hpp"
 #include "Logger.hpp"
@@ -55,6 +58,9 @@ If you have any problems with this project, please contact the authors.
 #include "File_API.h"
 #include "Game_API.h"
 
+
+#include "Graphics.hpp"
+#include "OBJ_Loader.h"
 
 //定义版本号
 #define VERSION "v1.5.0-pre-3"
@@ -139,10 +145,38 @@ void sslThread(){
 }
 #endif
 
+G g1;
+
+void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
+    // 加载OBJ文件
+    objl::Loader loader;
+    loader.LoadFile(objFilePath);
+
+
+	for(auto mesh : loader.LoadedMeshes)
+    {
+        for(int i=0;i<mesh.Vertices.size();i+=3)
+        {
+			Eigen::Vector3f p[3];
+            for(int j=0;j<3;j++)
+            {
+				p[j]={mesh.Vertices[i+j].Position.X, mesh.Vertices[i+j].Position.Y, mesh.Vertices[i+j].Position.Z};
+            }
+			p[0]*=100, p[1]*=100, p[2]*=100;//缩放！！！！！！
+            graphics.addTriangleToGrid(p[0],p[1],p[2]);
+        }
+    }
+}
+
+
+
 signed int main(signed int argc, char** argv) {
 
+convertOBJToGrid("bunny.obj", g1);
+g1.printGrid();
 
-
+while(1);
+return 0;
 	std::string LanguageFile = "";
 	std::string IPAddress = "127.0.0.1";
 	int ServerPort = 10086;
@@ -238,10 +272,10 @@ signed int main(signed int argc, char** argv) {
 		else XINFO("语言配置已加载成功");
 	}
 
-	INFO(X("sapi事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + X(" 上成功启动!"));
+	INFO(XX("sapi事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + XX(" 上成功启动!"));
 	if (UseQQBot) {
-		INFO(X("qq-bot事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + Locate + X(" 上成功启动!"));
-		INFO(X("qq-bot客户端已在 ") + IPAddress + ":" + std::to_string(ClientPort) + X(" 上成功启动!"));
+		INFO(XX("qq-bot事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + Locate + XX(" 上成功启动!"));
+		INFO(XX("qq-bot客户端已在 ") + IPAddress + ":" + std::to_string(ClientPort) + XX(" 上成功启动!"));
 	}
 	XINFO("项目地址：https://github.com/Nia-Server/NiaServer-Core/tree/main/NIAHttpBOT");
 	XINFO("项目作者：@NIANIANKNIA @jiansyuan");
@@ -298,7 +332,7 @@ signed int main(signed int argc, char** argv) {
 			return ;
 		}
 		const std::string& cmd = req.body;
-		WARN(X("收到一条执行DOS命令的请求：") + cmd);
+		WARN(XX("收到一条执行DOS命令的请求：") + cmd);
 		auto [cmdres, excd] = ([&cmd]() -> std::pair<std::string, int> {
 			int exitCode = 0;
 			std::array<char, 64> buffer {};
@@ -312,8 +346,8 @@ signed int main(signed int argc, char** argv) {
 			return {result, exitCode};
 		})();
 		if(!cmdres.empty() && cmdres.back() == '\n') [[likely]] cmdres.pop_back();
-		INFO(X("命令执行输出: ") + cmdres);
-		if (excd!=0) [[unlikely]] WARN(X("命令执行失败, 返回值: ")+std::to_string(excd));
+		INFO(XX("命令执行输出: ") + cmdres);
+		if (excd!=0) [[unlikely]] WARN(XXX("命令执行失败, 返回值: ")+std::to_string(excd));
 		else XINFO("命令执行成功！返回值: 0");
 		res.set_content(cmdres, "text/plain"), res.status = excd; // exitCode
 	});

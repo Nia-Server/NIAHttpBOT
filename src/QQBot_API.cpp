@@ -13,11 +13,11 @@ int32_t QQBot::send_private_message(const std::string & user_id, const std::stri
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok" && doc.HasMember("data")) {
             return doc["data"]["message_id"].GetInt();
         } else {
-            WARN(X("调用API <send_private_msg()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <send_private_msg()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <send_private_msg()> 超时，请检查连接！"));
+        WARN(XX("调用API <send_private_msg()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -32,11 +32,11 @@ int32_t QQBot::send_group_message(const std::string & group_id, const std::strin
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok" && doc.HasMember("data")) {
             return doc["data"]["message_id"].GetInt();
         } else {
-            WARN(X("调用API <send_group_msg()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <send_group_msg()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <send_group_msg()> 超时，请检查连接！"));
+        WARN(XX("调用API <send_group_msg()> 超时，请检查连接！"));
         return -2;
     }
 
@@ -51,11 +51,11 @@ int QQBot::delete_msg(const int32_t &message_id)
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else {
-            WARN(X("调用API <delete_msg()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <delete_msg()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <delete_msg()> 超时，请检查连接！"));
+        WARN(XX("调用API <delete_msg()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -68,14 +68,14 @@ int QQBot::send_like(const std::string & user_id, int times) {
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <send_like()> 后，点赞失败：") + res->body);
+            WARN(XX("调用API <send_like()> 后，点赞失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <send_like()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <send_like()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <send_like()> 超时，请检查连接！"));
+        WARN(XX("调用API <send_like()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -89,14 +89,14 @@ int QQBot::set_group_kick(const std::string & group_id, const std::string & user
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_kick()> 后，踢出失败：") + res->body);
+            WARN(XX("调用API <set_group_kick()> 后，踢出失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_kick()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_kick()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_kick()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_kick()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -109,14 +109,14 @@ int QQBot::set_group_ban(const std::string & group_id, const std::string & user_
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_ban()> 后，禁言失败：") + res->body);
+            WARN(XX("调用API <set_group_ban()> 后，禁言失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_ban()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_ban()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_ban()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_ban()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -130,14 +130,14 @@ int QQBot::set_group_whole_ban(const std::string & group_id, bool enable) {
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_whole_ban()> 后，全群禁言失败：") + res->body);
+            WARN(XX("调用API <set_group_whole_ban()> 后，全群禁言失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_whole_ban()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_whole_ban()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_whole_ban()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_whole_ban()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -151,14 +151,14 @@ int QQBot::set_group_admin(const std::string & group_id, const std::string & use
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_admin()> 后，设置管理员失败：") + res->body);
+            WARN(XX("调用API <set_group_admin()> 后，设置管理员失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_admin()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_admin()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_admin()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_admin()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -171,14 +171,14 @@ int QQBot::set_group_card(const std::string & group_id, const std::string & user
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_card()> 后，设置名片失败：") + res->body);
+            WARN(XX("调用API <set_group_card()> 后，设置名片失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_card()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_card()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_card()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_card()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -191,14 +191,14 @@ int QQBot::set_group_name(const std::string & group_id, const std::string & grou
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_name()> 后，设置群名称失败：") + res->body);
+            WARN(XX("调用API <set_group_name()> 后，设置群名称失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_name()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_name()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_name()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_name()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -212,14 +212,14 @@ int QQBot::set_group_leave(const std::string & group_id, bool is_dismiss) {
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_leave()> 后，退出群聊失败：") + res->body);
+            WARN(XX("调用API <set_group_leave()> 后，退出群聊失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_leave()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_leave()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_leave()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_leave()> 超时，请检查连接！"));
         return -2;
     }
 }
@@ -232,14 +232,14 @@ int QQBot::set_group_request(const std::string & flag, const std::string & sub_t
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok") {
             return 1;
         } else if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "failed") {
-            WARN(X("调用API <set_group_request()> 后，处理群请求失败：") + res->body);
+            WARN(XX("调用API <set_group_request()> 后，处理群请求失败：") + res->body);
             return 0;
         } else {
-            WARN(X("调用API <set_group_request()> 后，返回的数据无法解析：") + res->body);
+            WARN(XX("调用API <set_group_request()> 后，返回的数据无法解析：") + res->body);
             return -1;
         }
     } else {
-        WARN(X("调用API <set_group_request()> 超时，请检查连接！"));
+        WARN(XX("调用API <set_group_request()> 超时，请检查连接！"));
         return -2;
     }
 }

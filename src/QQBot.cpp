@@ -661,10 +661,10 @@ void main_qqbot(httplib::Server &svr) {
 	//如果指定的QQ群不存在
 	if (!isGroupExist) {
 		//向控制台输出
-		WARN(X("没有在机器人的群列表中找到指定的QQ群：") + QQGroup);
+		WARN(XX("没有在机器人的群列表中找到指定的QQ群：") + QQGroup);
 	} else {
 		//向控制台输出
-		INFO(X("机器人监听已在指定QQ群开启：") + QQGroup);
+		INFO(XX("机器人监听已在指定QQ群开启：") + QQGroup);
 		//开始检测机器人在指定的QQ群中的权限
 		//获取机器人自己的QQ号
 		auto get_login_info_res = qqbot->get_login_info();
@@ -673,11 +673,11 @@ void main_qqbot(httplib::Server &svr) {
 		auto get_group_member_info_res = qqbot->get_group_member_info(QQGroup, selfQQ);
 		std::string selfPermission = get_group_member_info_res.role;
 		//向控制台输出
-		INFO(X("机器人在指定QQ群中的权限为：") << selfPermission);
+		INFO(XX("机器人在指定QQ群中的权限为：") << selfPermission);
 		//如果机器人在指定QQ群中的权限不是管理员或者群主
 		if (selfPermission != "admin" && selfPermission != "owner") {
 			//向控制台输出
-			WARN(X("机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主！"));
+			WARN(XX("机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主！"));
 			//向指定QQ群发送消息
 			qqbot->send_group_message(QQGroup, "机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主！");
 		}
@@ -686,7 +686,7 @@ void main_qqbot(httplib::Server &svr) {
 	//接收QQ消息事件
 	svr.Post(Locate, [](const httplib::Request& req, httplib::Response& res) {
 
-		INFO(X("qq客户端接收的事件数据为:") << req.body);
+		INFO(XX("qq客户端接收的事件数据为:") << req.body);
 		//解析字符串并创建一个json对象
 		rapidjson::Document qq_event_data;
 		qq_event_data.Parse(req.body.c_str());
