@@ -145,13 +145,12 @@ void sslThread(){
 }
 #endif
 
-G g1;
+
 
 void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
     // 加载OBJ文件
     objl::Loader loader;
     loader.LoadFile(objFilePath);
-
 
 	for(auto mesh : loader.LoadedMeshes)
     {
@@ -162,8 +161,7 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
             {
 				p[j]={mesh.Vertices[i+j].Position.X, mesh.Vertices[i+j].Position.Y, mesh.Vertices[i+j].Position.Z};
             }
-			p[0]*=100, p[1]*=100, p[2]*=100;//缩放！！！！！！
-            graphics.addTriangleToGrid(p[0],p[1],p[2]);
+			graphics.addVertice(p[0],p[1],p[2]);
         }
     }
 }
@@ -172,11 +170,16 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
 
 signed int main(signed int argc, char** argv) {
 
-convertOBJToGrid("bunny.obj", g1);
-g1.printGrid();
+	G g1(10, 10, 10);
+	convertOBJToGrid("bunny.obj", g1);
+	g1.autoAdjust();
+	g1.calcGrid();
+	g1.printGrid();
+	//g1.setResultSize(20,20,20);
+	
+	//g1.printGrid();
 
-while(1);
-return 0;
+
 	std::string LanguageFile = "";
 	std::string IPAddress = "127.0.0.1";
 	int ServerPort = 10086;
