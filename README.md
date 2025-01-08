@@ -1,7 +1,7 @@
 # NIAHttpBOT
 
 
-[![status](https://img.shields.io/github/actions/workflow/status/Nia-Server/NIAHttpBOT/pre-buil.yml?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/actions/workflows/pre-build.yml)
+[![status](https://img.shields.io/github/actions/workflow/status/Nia-Server/NIAHttpBOT/pre-build.yml?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/actions/workflows/pre-build.yml)
 [![GitHub Release Date](https://img.shields.io/github/release-date-pre/Nia-Server/NIAHttpBOT?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases)
 [![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NIAHttpBOT?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases/latest)
 [![GitHub last commit](https://img.shields.io/github/last-commit/Nia-Server/NIAHttpBOT?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/commits)
@@ -31,7 +31,7 @@
 
 1.本项目基于**http**进行通讯，故当前Minecraft版本应当注意启用**minecraft/server-net**模块（该模块只能运行在服务器上）
 
-2.您可以前往**NiaServer-Core**项目地址的[release](https://github.com/Nia-Server/NiaServer-Core/releases)下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIA-Http-Bot`
+2.您可以前往**NiaServer-Core**项目地址的[release](https://github.com/Nia-Server/NIAHttpBOT/releases)下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIA-Http-Bot`
 
 3.如果您在使用期间遇到了问题/有建议，您可以前往**NiaServer-Core**的[issues](https://github.com/Nia-Server/NiaServer-Core/issues)进行反馈！
 
@@ -39,18 +39,18 @@
 
 ***
 
-## 使用/开发教程
+## 使用教程
+
+### Windows平台
 
 > [!tip]
-> 这里使用的是NapCatQQ，事实上，我们是基于onebot-v11进行的开发，只要您所使用的机器人遵循这个接口，即可使用！
+> 不使用QQ机器人的用户可以跳过第5-9步
 
-由于**minecraft/server-net**模块在本地存档中无法启用，所以我们应当在本地搭建一个服务器环境用于开发
+1. 前往我的世界官网[下载BDS](https://www.minecraft.net/en-us/download/server/bedrock)，并将下好的服务端解压
 
-1.前往我的世界官网[下载BDS](https://www.minecraft.net/en-us/download/server/bedrock)，并将下好的服务端解压
+2. 安装好对应的行为包
 
-2.安装行为包
-
-3.修改服务器端文件，来启用net模块：将`config/default/permissions.json`内容改为
+3. 修改服务器端文件，来启用net模块：将`config/default/permissions.json`内容改为
 
 ```json
 {
@@ -66,35 +66,96 @@
 
 ```
 
-即可启用
+4. Windows平台下下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIAHttp-Bot`
 
-4.Windows平台下下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIAHttp-Bot`，Linux平台下载最新release构建的**NIAHttpBOT**来获取最新版的`NIAHttp-Bot`
+5. 根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
 
-5.根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
+6. 安装后，打开机器人**WEBUI**界面，**点击侧边栏网络配置**，点击**添加配置**
 
-6.安装后，打开机器人WEBUI界面，**点击侧边栏网络配置**，点击**添加配置**，名称首先写上**服务器**，类型选择**http服务器**，启用，并将端口与NIAHttpBOT的配置文件中的**ClientPort**保持一致；然后再次点击**添加配置**，名称写上客户端，类型选择**http客户端**，启用，并将URL一栏与NIAHttpBOT中配置文件的`http://127.0.0.1:<ServerPort>/<Locate>`保持一致，如果是原始配置文件没有改动，则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕。
+7. 名称首先写上**服务器**，类型选择**http服务器**，启用，并将端口与NIAHttpBOT的配置文件中的**ClientPort**保持一致；
 
-7.按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
+8. 然后再次点击**添加配置**，名称写上客户端，类型选择**http客户端**，启用，并将URL一栏与NIAHttpBOT中配置文件的`http://127.0.0.1:<ServerPort>/<Locate>`保持一致，如果是原始配置文件没有改动，则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕。
 
-8.Windows平台点击**NIAHttpBOT.exe**启动;Linux平台在终端输入`./NIAHttpBOT`来启动NIAhttpBOT
+9. 按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
 
-在Linux如果出项**权限不够**的提示，这个错误是因为你试图运行的文件没有执行权限。你可以使用 `chmod` 命令来给文件添加执行权限。以下是具体的步骤：
+10. 双击**NIAHttpBOT.exe**来启动，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.cfg`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)，修改后请输入`reload`来重新加载配置文件。
 
-8.1. 打开终端
+11. 最后启动MCBDS服务端即可！
 
-8.2. 使用 `cd` 命令导航到文件所在的目录
 
-8.3. 运行 `chmod +x NIAHttpBOT` 命令给文件添加执行权限
+### Linux平台
 
-这是具体的命令：
+> [!tip]
+> 不使用QQ机器人的用户可以跳过第5-9步
 
-```bash
-chmod +x NIAHttpBOT
+1. 前往我的世界官网[下载BDS](https://www.minecraft.net/en-us/download/server/bedrock)，并将下好的服务端解压
+
+2. 安装好对应的行为包
+
+3. 修改服务器端文件，来启用net模块：将`config/default/permissions.json`内容改为
+
+```json
+{
+    "allowed_modules": [
+        "@minecraft/server-gametest",
+        "@minecraft/server",
+        "@minecraft/server-ui",
+        "@minecraft/server-admin",
+        "@minecraft/server-editor",
+        "@minecraft/server-net"
+    ]
+}
+
 ```
 
-然后你就可以使用 `./NIAHttpBOT` 命令来运行你的程序了。
+4. Linux平台下载最新release构建的**NIAHttpBOT**来获取最新版的`NIAHttp-Bot`
 
-8.开始开发！
+5. 根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
+
+6. 安装后，打开机器人WEBUI界面，**点击侧边栏网络配置**，点击**添加配置**
+
+7. 名称首先写上**服务器**，类型选择**http服务器**，启用，并将端口与NIAHttpBOT的配置文件中的**ClientPort**保持一致；
+
+8. 然后再次点击**添加配置**，名称写上客户端，类型选择**http客户端**，启用，并将URL一栏与NIAHttpBOT中配置文件的`http://127.0.0.1:<ServerPort>/<Locate>`保持一致，如果是原始配置文件没有改动，则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕。
+
+9. 按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
+
+10. 在终端输入`./NIAHttpBOT`来启动NIAhttpBOT
+
+> [!tip]
+> 在Linux如果出项**权限不够**的提示，这个错误是因为你试图运行的文件没有执行权限。你可以使用 `chmod` 命令来给文件添加执行权限。以下是具体的步骤（11-13）：
+
+11. 打开终端
+
+12. 使用 `cd` 命令导航到文件所在的目录
+
+13. 运行 `chmod +x NIAHttpBOT` 命令给文件添加执行权限
+
+然后你就可以使用 `./NIAHttpBOT` 命令来运行你的程序了，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.cfg`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)，修改后请输入`reload`来重新加载配置文件。
+
+14. 最后启动MCBDS服务端即可！
+
+
+## 开发注意事项
+
+
+1. 我们是基于NapCatQQ开发的QQ机器人
+
+2. 由于**minecraft/server-net**模块在本地存档中无法启用，所以我们应当在本地搭建一个如上述教程服务器环境用于开发
+
+3. 在本地开发时,我们应当解除loopback，否则我们无法在游戏中通过`127.0.0.1`进入游戏，具体操作步骤如下：
+
+**以管理员身份打开PowerShell**，然后根据MC版本输入以下命令：
+
+Minecraft Bedrock Edition（正式版）
+```PowerShell
+CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-1958404141-86561845-1752920682-3514627264-368642714-62675701-733520436
+```
+
+Minecraft Bedrock Edition Preview（预览版）
+```PowerShell
+CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-424268864-5579737-879501358-346833251-474568803-887069379-4040235476
+```
 
 
 ***
@@ -118,7 +179,9 @@ UseCmd = false
 
 # QQ机器人配置:
 
+# 是否启用QQ机器人,默认为true
 UseQQBot = true
+
 # 客户端端口，需要与QQ机器人作为服务器设置的监听Http端口一致
 ClientPort = 10023
 
@@ -195,7 +258,7 @@ QQGroup = "123456789"
 > [!warning]
 > 以下所有api均基于最新构建的版本（见下方RELEASE）
 
-[![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NiaServer-Core?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NiaServer-Core/releases/)
+[![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NIAHttpBOT?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases/latest)
 
 ### [POST] `/RunCmd`
 
