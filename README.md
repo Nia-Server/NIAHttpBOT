@@ -1,5 +1,14 @@
 # NIAHttpBOT
 
+
+[![status](https://img.shields.io/github/actions/workflow/status/Nia-Server/NIAHttpBOT/pre-buil.yml?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/actions/workflows/pre-build.yml)
+[![GitHub Release Date](https://img.shields.io/github/release-date-pre/Nia-Server/NIAHttpBOT?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases)
+[![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NIAHttpBOT?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases/latest)
+[![GitHub last commit](https://img.shields.io/github/last-commit/Nia-Server/NIAHttpBOT?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/commits)
+
+![NiaServer-Core](https://socialify.git.ci/Nia-Server/NIAHttpBOT/image?description=1&descriptionEditable=NIA%E6%9C%8D%E5%8A%A1%E5%99%A8HttpBOT&font=Source%20Code%20Pro&forks=1&issues=1&logo=https://docs.mcnia.com/logo.png&name=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Auto)
+
+
 ## 简介
 
 使用C++开发的BOT，基于http实现更多可能，本项目为[NiaServer-Core](https://github.com/Nia-Server/NiaServer-Core)子项目

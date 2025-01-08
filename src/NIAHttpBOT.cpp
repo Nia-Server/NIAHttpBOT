@@ -63,7 +63,7 @@ If you have any problems with this project, please contact the authors.
 #include "OBJ_Loader.h"
 
 //定义版本号
-#define VERSION "v1.5.0-pre-3"
+#define VERSION "v1.0.0-pre-1"
 
 #ifdef WIN32
 #define popen _popen
@@ -75,7 +75,7 @@ If you have any problems with this project, please contact the authors.
 void sslThread(){
 	//与GitHub的API通信来检查更新
 	httplib::SSLClient cli("api.github.com");
-	auto res = cli.Get("/repos/Nia-Server/NiaServer-Core/releases");
+	auto res = cli.Get("/repos/Nia-Server/NIAHttpBOT/releases");
 	if (res && res->status == 200) {
 		rapidjson::Document doc;
 		doc.Parse(res->body.c_str());
@@ -177,7 +177,7 @@ signed int main(signed int argc, char** argv) {
 	// g1.printGrid();
 
 	//g1.setResultSize(20,20,20);
-	
+
 	//g1.printGrid();
 
 
@@ -281,7 +281,7 @@ signed int main(signed int argc, char** argv) {
 		INFO(XX("qq-bot事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + Locate + XX(" 上成功启动!"));
 		INFO(XX("qq-bot客户端已在 ") + IPAddress + ":" + std::to_string(ClientPort) + XX(" 上成功启动!"));
 	}
-	XINFO("项目地址：https://github.com/Nia-Server/NiaServer-Core/tree/main/NIAHttpBOT");
+	XINFO("项目地址：https://github.com/Nia-Server/NIAHttpBOT/");
 	XINFO("项目作者：@NIANIANKNIA @jiansyuan");
 	XINFO("在使用中遇到问题请前往项目下的 issue 反馈，如果觉得本项目不错不妨点个 star！");
 	if (UseCmd)  XWARN("检测到执行DOS命令功能已启用，请注意服务器安全！");
