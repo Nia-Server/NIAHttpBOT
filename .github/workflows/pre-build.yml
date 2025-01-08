@@ -17,11 +17,12 @@ jobs:
         uses: threeal/cmake-action@v1.3.0
         with:
           run-build: true
+          build-dir: NIAHttpBOT
       - name: Upload the exe file
         uses: actions/upload-artifact@v4
         with:
           name: NIAHttpBOT.exe
-          path: ./Debug/NIAHttpBOT.exe
+          path: ./NIAHttpBOT/Debug/NIAHttpBOT.exe
 
   build-linux:
     runs-on: ubuntu-latest
@@ -34,8 +35,9 @@ jobs:
         uses: threeal/cmake-action@v1.3.0
         with:
           run-build: true
+          build-dir: NIAHttpBOT
       - name: Upload the executable file
         uses: actions/upload-artifact@v4
         with:
           name: NIAHttpBOT
-          path: ./NIAHttpBOT
+          path: ./NIAHttpBOT/NIAHttpBOT
