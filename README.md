@@ -14,7 +14,7 @@
 ## 功能特性
 
 - 基于http可以实现对特定文件进行读写、创建以及删除等功能
-- 基于http搭配**NiaServer-Core**以及**LLONEBot**可以实现QQ机器人与服务器联动功能
+- 基于http搭配**NiaServer-Core**以及**NapCatQQ**可以实现QQ机器人与服务器联动功能
 
 ***
 
@@ -33,7 +33,7 @@
 ## 使用/开发教程
 
 > [!tip]
-> 这里使用的是LLONEBot，事实上，我们是基于onebot-v11进行的开发，只要您所使用的机器人遵循这个接口，即可使用！
+> 这里使用的是NapCatQQ，事实上，我们是基于onebot-v11进行的开发，只要您所使用的机器人遵循这个接口，即可使用！
 
 由于**minecraft/server-net**模块在本地存档中无法启用，所以我们应当在本地搭建一个服务器环境用于开发
 
@@ -61,19 +61,21 @@
 
 4.Windows平台下下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIAHttp-Bot`，Linux平台下载最新release构建的**NIAHttpBOT**来获取最新版的`NIAHttp-Bot`
 
-5.根据自己的平台，下载最新的[NTQQ](https://im.qq.com/pcqq/index.shtml)，后根据[LLONEBot安装教程](https://llonebot.github.io/zh-CN/guide/getting-started)安装相应的机器人框架
+5.根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
 
-6.安装后，打开机器人设置界面，**启用HTTP服务**，**HTTP服务监听端口**与下述配置文件中**ClientPort**保持一致，**启用HTTP事件上报**，上报地址如果是下述配置项目则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕
+6.安装后，打开机器人WEBUI界面，**点击侧边栏网络配置**，点击**添加配置**，名称首先写上**服务器**，类型选择**http服务器**，启用，并将端口与NIAHttpBOT的配置文件中的**ClientPort**保持一致；然后再次点击**添加配置**，名称写上客户端，类型选择**http客户端**，启用，并将URL一栏与NIAHttpBOT中配置文件的`http://127.0.0.1:<ServerPort>/<Locate>`保持一致，如果是原始配置文件没有改动，则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕。
 
-7.Windows平台点击**NIAHttpBOT.exe**启动;Linux平台在终端输入`./NIAHttpBOT`来启动！
+7.按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
+
+8.Windows平台点击**NIAHttpBOT.exe**启动;Linux平台在终端输入`./NIAHttpBOT`来启动NIAhttpBOT
 
 在Linux如果出项**权限不够**的提示，这个错误是因为你试图运行的文件没有执行权限。你可以使用 `chmod` 命令来给文件添加执行权限。以下是具体的步骤：
 
-7.1. 打开终端
+8.1. 打开终端
 
-7.2. 使用 `cd` 命令导航到文件所在的目录
+8.2. 使用 `cd` 命令导航到文件所在的目录
 
-7.3. 运行 `chmod +x NIAHttpBOT` 命令给文件添加执行权限
+8.3. 运行 `chmod +x NIAHttpBOT` 命令给文件添加执行权限
 
 这是具体的命令：
 
@@ -91,21 +93,31 @@ chmod +x NIAHttpBOT
 ## 配置文件
 
 ```cfg
+# 语言文件路径,默认为空-CN
+LanguageFile = ""
+
 # ip地址，一般为不用改
 IPAddress = "127.0.0.1"
 
-# 服务器端口，需与行为包端口保持一致
+# 服务器端口，需与行为包端口以及QQ机器人作为客户端上报事件地址保持一致
 ServerPort = 10086
+
+# 功能配置:
 
 #是否启用DOS指令功能
 UseCmd = false
 
-#是否启用QQ机器人相关功能
-UseQQBot = true
+# QQ机器人配置:
 
-# 客户端端口，需要与机器人设置的监听Http端口一致
+UseQQBot = true
+# 客户端端口，需要与QQ机器人作为服务器设置的监听Http端口一致
 ClientPort = 10023
-https://github.com/Nia-Server/NiaServer-Docs
+
+# 不知道啥作用的不用改
+Locate = "/qqEvent"
+
+# 主人QQ配置
+OwnerQQ = "123456789"
 
 # 监听QQ群
 QQGroup = "123456789"

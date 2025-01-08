@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2024 Nia-Server
+Copyright (C) 2025 Nia-Server
 
 The developer is not responsible for you, and the developer is not obliged to write code for you, and is not liable for any consequences of your use.
 
@@ -170,11 +170,12 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
 
 signed int main(signed int argc, char** argv) {
 
-	G g1(10, 10, 10);
-	convertOBJToGrid("bunny.obj", g1);
-	g1.autoAdjust();
-	g1.calcGrid();
-	g1.printGrid();
+	// G g1(10, 10, 10);
+	// convertOBJToGrid("bunny.obj", g1);
+	// g1.autoAdjust();
+	// g1.calcGrid();
+	// g1.printGrid();
+
 	//g1.setResultSize(20,20,20);
 	
 	//g1.printGrid();

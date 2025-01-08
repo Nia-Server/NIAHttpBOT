@@ -97,6 +97,12 @@ void muteUser(const command_addition_info& info, const std::vector<std::string>&
 		qqbot->send_group_message(info.group_id, "禁言指令格式错误，禁言格式为:#禁言 @要禁言的人 时间");
 		return ;
 	}
+	//判断禁言的qq号是否为机器人&&主人qq
+	std::string bot_qq = std::to_string(qqbot->get_login_info().user_id);
+	if (info.target_qq == bot_qq || info.target_qq == OwnerQQ) {
+		qqbot->send_group_message(info.group_id, "我不能禁言自己或者我的主人哦...");
+		return ;
+	}
 	//获取禁言时间
 	std::string band_time_str = duration;
 	//检查band_time是否有空格，有的话就去除
@@ -566,16 +572,16 @@ void loadForbiddenWords(const std::string& filename) {
 	//定义违禁词数量
 	int count = 0;
     while (std::getline(file, word)) {
+		//如果违禁词为空，跳过这一行
+		if (word == "") {
+			continue;
+		}
 		//如果违禁词结尾为；，等符号，去掉尾部符号再加入到违禁词列表中
 		if (word[word.size() - 1] == ';' || word[word.size() - 1] == ',' || word[word.size() - 1] == '；' || word[word.size() - 1] == '，') {
 			word = word.substr(0, word.size() - 1);
 		}
 		//如果违禁词开头为#，跳过这一行
 		if (word[0] == '#') {
-			continue;
-		}
-		//如果违禁词为空，跳过这一行
-		if (word == "") {
 			continue;
 		}
         forbiddenWords.push_back(word);

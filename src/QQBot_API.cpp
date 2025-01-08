@@ -337,9 +337,9 @@ QQBot::group_member_info QQBot::get_group_member_info(const std::string & group_
             info.area = doc["data"]["area"].GetString();
             info.join_time = doc["data"]["join_time"].GetInt();
             info.last_sent_time = doc["data"]["last_sent_time"].GetInt();
-            info.level = doc["data"]["level"].GetInt();
+            info.level = doc["data"]["level"].GetString();
             info.role = doc["data"]["role"].GetString();
-            //info.title = doc["data"]["title"].GetString();
+            info.title = doc["data"]["title"].GetString();
             info.title_expire_time = doc["data"]["title_expire_time"].GetInt();
             info.card_changeable = doc["data"]["card_changeable"].GetBool();
         } else {

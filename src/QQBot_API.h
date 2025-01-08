@@ -177,9 +177,9 @@ public:
         std::string area;
         int32_t join_time;
         int32_t last_sent_time;
-        int32_t level;
+        std::string level;
         std::string role;
-        //std::string title;
+        std::string title;
         int32_t title_expire_time;
         bool card_changeable;
     };
