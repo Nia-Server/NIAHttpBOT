@@ -1,6 +1,5 @@
 # NIAHttpBOT
 
-
 [![status](https://img.shields.io/github/actions/workflow/status/Nia-Server/NIAHttpBOT/pre-build.yml?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/actions/workflows/pre-build.yml)
 [![GitHub Release Date](https://img.shields.io/github/release-date-pre/Nia-Server/NIAHttpBOT?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases)
 [![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NIAHttpBOT?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases/latest)
@@ -16,7 +15,7 @@
 
 ## 为什么开发？
 
-由于目前我的世界的Script-api无法实现诸如文件读写等功能,为此我们特此基于C++开发了`NIA-Http-Bot`用来实现更多功能，从而赋予Script-api更多可能
+由于目前我的世界的Script-api无法实现诸如文件读写等功能,为此我们特此基于C++开发了`NIAHttpBOT`用来实现更多功能，从而赋予Script-api更多可能
 
 ***
 
@@ -29,13 +28,13 @@
 
 ## 使用前注意事项
 
-1.本项目基于**http**进行通讯，故当前Minecraft版本应当注意启用**minecraft/server-net**模块（该模块只能运行在服务器上）
+1. 本项目基于**http**进行通讯，故当前Minecraft版本应当注意启用**minecraft/server-net**模块（该模块只能运行在服务器上）
 
-2.您可以前往**NiaServer-Core**项目地址的[release](https://github.com/Nia-Server/NIAHttpBOT/releases)下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIA-Http-Bot`
+2. 您可以前往**NiaServer-Core**项目地址的[release](https://github.com/Nia-Server/NIAHttpBOT/releases)下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIAHttpBOT`
 
-3.如果您在使用期间遇到了问题/有建议，您可以前往**NiaServer-Core**的[issues](https://github.com/Nia-Server/NiaServer-Core/issues)进行反馈！
+3. 如果您在使用期间遇到了问题/有建议，您可以前往**NiaServer-Core**的[issues](https://github.com/Nia-Server/NiaServer-Core/issues)进行反馈！
 
-4.由于**采用的是http通讯，而非https**，我们**非常不推荐**您将NIAHttpBOT与基岩版服务端分开放置于两台服务器上，这是非常不安全的操作！请务必**将NiaHttpBOT与基岩版服务端放置于同一台服务器之上**，并**注意防火墙设置**，不要开放使用过程中涉及的两个端口，以免对服务器安全造成威胁！
+4. 由于**采用的是http通讯，而非https**，我们**非常不推荐**您将NIAHttpBOT与基岩版服务端分开放置于两台服务器上，这是非常不安全的操作！请务必**将NiaHttpBOT与基岩版服务端放置于同一台服务器之上**，并**注意防火墙设置**，不要开放使用过程中涉及的两个端口，以免对服务器安全造成威胁！
 
 ***
 
@@ -66,21 +65,21 @@
 
 ```
 
-4. Windows平台下下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIAHttp-Bot`
+1. Windows平台下下载最新release构建的**NIAHttpBOT.exe**来获取最新版的`NIAHttpBOT`
 
-5. 根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
+2. 根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
 
-6. 安装后，打开机器人**WEBUI**界面，**点击侧边栏网络配置**，点击**添加配置**
+3. 安装后，打开机器人**WEBUI**界面，**点击侧边栏网络配置**，点击**添加配置**
 
-7. 名称首先写上**服务器**，类型选择**http服务器**，启用，并将端口与NIAHttpBOT的配置文件中的**ClientPort**保持一致；
+4. 名称首先写上**服务器**，类型选择**http服务器**，启用，并将端口与NIAHttpBOT的配置文件中的**ClientPort**保持一致；
 
-8. 然后再次点击**添加配置**，名称写上客户端，类型选择**http客户端**，启用，并将URL一栏与NIAHttpBOT中配置文件的`http://127.0.0.1:<ServerPort>/<Locate>`保持一致，如果是原始配置文件没有改动，则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕。
+5. 然后再次点击**添加配置**，名称写上客户端，类型选择**http客户端**，启用，并将URL一栏与NIAHttpBOT中配置文件的`http://127.0.0.1:<ServerPort>/<Locate>`保持一致，如果是原始配置文件没有改动，则为`http://127.0.0.1:10086/qqEvent`，机器人至此配置完毕。
 
-9. 按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
+6. 按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
 
-10. 双击**NIAHttpBOT.exe**来启动，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.cfg`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)，修改后请输入`reload`来重新加载配置文件。
+7.  双击**NIAHttpBOT.exe**来启动，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.cfg`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)，修改后请输入`reload`来重新加载配置文件。
 
-11. 最后启动MCBDS服务端即可！
+8.  最后启动MCBDS服务端即可！
 
 
 ### Linux平台
@@ -108,7 +107,7 @@
 
 ```
 
-4. Linux平台下载最新release构建的**NIAHttpBOT**来获取最新版的`NIAHttp-Bot`
+4. Linux平台下载最新release构建的**NIAHttpBOT**来获取最新版的`NIAHttpBOT`
 
 5. 根据[NapCatQQ安装教程](https://napneko.icu/guide/start-install)安装相应的机器人框架
 
@@ -426,9 +425,8 @@ http.request(reqGetFileData).then((response) => {
 
 ### [POST] `/GetJsonFileData`
 
-::: warning 警告
-json文件应当没有任何语法错误/注释，否则将无法正确读取json数据！，详细请查看[json文件读取注意事项](#json文件读取注意事项)
-:::
+> [!warning]
+> json文件应当没有任何语法错误/注释，否则将无法正确读取json数据！，详细请查看[json文件读取注意事项](#json文件读取注意事项)
 
 获取JSON文件数据，获取成功则返回json格式的数据，状态码为`200`，获取失败则返回`fail`，状态码为`400`
 
@@ -561,7 +559,6 @@ http.request(reqWriteLineToFile).then((response) => {
 错误的使用了中文的标点符号导致语法错误！
 ```json
 {
-    //这是一行注释，这会导致无法正常读取！
     "key1":value，
     "key2"：value
 }
@@ -813,9 +810,14 @@ world.afterEvents.worldInitialize.subscribe(() => {
 
 [玩家交易市场](https://github.com/Nia-Server/NiaServer-Core/blob/dev/development_behavior_packs/NIA_V4.0_BP/scripts/market.js)
 
+## 第三方开源引用
+
+#### [rapidjson](https://github.com/Tencent/rapidjson) - [MIT License](https://github.com/Tencent/rapidjson?tab=License-1-ov-file#readme)
+
+#### [cpp-httplib](https://github.com/yhirose/cpp-httplib) - [MIT License](https://github.com/yhirose/cpp-httplib?tab=MIT-1-ov-file#readme)
+
+#### [OBJ-Loader](https://github.com/Bly7/OBJ-Loader) - [MIT License](https://github.com/Bly7/OBJ-Loader?tab=MIT-1-ov-file)
+
 ## 许可证
 
 本项目基于[`AGPL-3.0`](https://github.com/Nia-Server/NIAHttpBOT/blob/main/LICENSE)开源许可证条款
-
-
-
