@@ -33,6 +33,8 @@
 - 跨平台兼容
 - 不受Minecraft BDS版本更新的影响
 
+***
+
 ## 使用前注意事项
 
 1. 本项目基于**http**进行通讯，故当前Minecraft版本应当注意启用**minecraft/server-net**模块（该模块只能运行在服务器上）

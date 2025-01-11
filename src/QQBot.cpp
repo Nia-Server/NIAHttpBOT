@@ -5,6 +5,7 @@
 CFGPAR::parser par;
 
 //获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,ClientPort
+std::string ServerLocate;
 std::string Locate;
 bool UseQQBot;
 std::string OwnerQQ;
@@ -17,6 +18,12 @@ QQBot* qqbot;
 
 std::vector<std::string> forbiddenWords;
 std::vector<std::string> msgs;
+
+extern STARTUPINFO si;
+extern PROCESS_INFORMATION pi;
+extern SECURITY_ATTRIBUTES sa;
+extern HANDLE g_hChildStd_IN_Wr;
+extern HANDLE g_hChildStd_IN_Rd;
 
 struct command_addition_info {
     std::string group_id;
@@ -538,6 +545,105 @@ void changeRole(const command_addition_info& info, const std::vector<std::string
 	}
 }
 
+//开启BDS服务器
+void startServer(const command_addition_info& info, const std::vector<std::string>& args) {
+	//判断执行者是否为管理员
+	if (info.sender_role != "admin" && info.sender_role  != "owner" && info.sender_qq != OwnerQQ) {
+		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
+		return ;
+	}
+	#ifdef _WIN32
+		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+			qqbot->send_group_message(info.group_id, "服务器已经在运行中，无需重新启动！");
+		} else {
+			ZeroMemory(&si, sizeof(si));
+			si.cb = sizeof(si);
+			ZeroMemory(&pi, sizeof(pi));
+
+			// Create pipes for the child process's STDIN and STDOUT.
+			sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+			sa.bInheritHandle = TRUE;
+			sa.lpSecurityDescriptor = NULL;
+
+			CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
+			SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
+
+			si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+			si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+			si.hStdInput = g_hChildStd_IN_Rd;
+			si.dwFlags |= STARTF_USESTDHANDLES;
+
+			// Start the child process.
+			if (!CreateProcess(NULL, const_cast<char*>(ServerLocate.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+				qqbot->send_group_message(info.group_id, "服务器启动失败！失败原因：" + std::to_string(GetLastError()));
+				WARN("服务器启动失败 (" + std::to_string(GetLastError()) + ")");
+				return;
+			} else {
+				INFO("服务器已成功启动！");
+				qqbot->send_group_message(info.group_id, "服务器已成功启动！");
+			}
+
+		}
+	#else
+		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
+			qqbot->send_group_message(info.group_id, "服务器已经在运行中，无需重新启动！");
+		} else {
+			std::system(ServerLocate.c_str());
+			if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
+				qqbot->send_group_message(info.group_id, "服务器已成功启动！");
+			} else {
+				qqbot->send_group_message(info.group_id, "服务器启动失败！请检查服务器文件是否存在！");
+			}
+		}
+	#endif
+}
+
+//关闭BDS服务器
+void stopServer(const command_addition_info& info, const std::vector<std::string>& args) {
+	//判断执行者是否为管理员
+	if (info.sender_role != "admin" && info.sender_role  != "owner" && info.sender_qq != OwnerQQ) {
+		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
+		return ;
+	}
+	#ifdef _WIN32
+		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+			const char* command = "stop\n";
+			DWORD written;
+			if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
+				qqbot->send_group_message(info.group_id, "服务器关闭失败！请稍后再试！");
+				WARN("向服务器发送stop命令失败,原因可能是未使用startserver启动服务器!");
+			} else {
+				qqbot->send_group_message(info.group_id, "已成功向服务器发送stop命令！");
+				INFO("已向服务器发送stop命令!");
+			}
+
+			// 等待子进程结束
+			WaitForSingleObject(pi.hProcess, INFINITE);
+
+			// Close process and thread handles.
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+			CloseHandle(g_hChildStd_IN_Wr);
+			CloseHandle(g_hChildStd_IN_Rd);
+			qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
+			INFO("服务器已成功关闭!");
+		} else {
+			qqbot->send_group_message(info.group_id, "服务器未运行，无需关闭！");
+		}
+	#else
+		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
+			std::system("killall bedrock_server");
+			if (std::system("ps -ef | grep bedrock_server | grep -v grep") != 0) {
+				qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
+			} else {
+				qqbot->send_group_message(info.group_id, "服务器关闭失败！请检查服务器是否正常运行！");
+			}
+		} else {
+			qqbot->send_group_message(info.group_id, "服务器未运行，无需关闭！");
+		}
+	#endif
+}
+
 // 定义指令映射
 std::unordered_map<std::string, CommandHandler> commandMap = {
     {"帮助", showHelpMenu},
@@ -552,7 +658,9 @@ std::unordered_map<std::string, CommandHandler> commandMap = {
 	{"解封", unbanPlayer},
 	{"查询", queryPlayerInfo},
 	{"查", queryPlayerInfo},
-	{"改权限", changeRole}
+	{"改权限", changeRole},
+	{"开服", startServer},
+	{"关服", stopServer}
 };
 
 //读取违禁词列表
@@ -616,6 +724,7 @@ void main_qqbot(httplib::Server &svr) {
 
 	//获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,ClientPort
     Locate = par.getString("Locate");
+	ServerLocate = par.getString("ServerLocate");
     OwnerQQ = par.getString("OwnerQQ");
     QQGroup = par.getString("QQGroup");
     IPAddress = par.getString("IPAddress");
@@ -808,13 +917,11 @@ void main_qqbot(httplib::Server &svr) {
 				if (message_item.IsObject() && message_item.HasMember("type") && message_item["type"].IsString() && message_item.HasMember("data") && message_item["data"].IsObject()) {
 					std::string type = message_item["type"].GetString();
 					const rapidjson::Value& data = message_item["data"];
-
 					if (type == "text") {
 						std::string text = data["text"].GetString();
 						message += text;
 						if (i == 0 && text[0] == '#') {
 							is_command = true;
-							return ;
 						}
 						transfer_message += text;
 					}
@@ -855,7 +962,6 @@ void main_qqbot(httplib::Server &svr) {
 
 				}
 			}
-
 			//判断消息是否包含违禁词
 			if (containsForbiddenWords(message)) {
 				//看发送者是否为管理员或者群主
@@ -908,6 +1014,9 @@ void main_qqbot(httplib::Server &svr) {
 				}
 			}
 
+			if (is_command) {
+				return ;
+			}
 			//群消息转发
 			std::string nickname = qq_event_data["sender"]["nickname"].GetString();
 			std::string card = qq_event_data["sender"]["card"].GetString();
