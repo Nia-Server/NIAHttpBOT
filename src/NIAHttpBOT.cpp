@@ -225,9 +225,6 @@ signed int main(signed int argc, char** argv) {
 
 	//g1.printGrid();
 
-
-	SetConsoleCtrlHandler(ConsoleHandler, TRUE);
-
 	std::string LanguageFile = "";
 	std::string ServerLocate = "D:\\NiaServer-Core\\bedrock_server.exe";
 	std::string IPAddress = "127.0.0.1";
@@ -242,8 +239,9 @@ signed int main(signed int argc, char** argv) {
 	std::cout << "\033]0;NIAHttpBOT " << VERSION <<"\007";
 
 
-	//检测是否有其他进程正在运行
+	//检测是否有其他进程正在运行&&终端关闭检测
 	#ifdef WIN32
+		SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 		SetConsoleOutputCP(65001);
 		HANDLE hMutex = CreateMutex(NULL, FALSE, "NIAHttpBOT");
 		if (hMutex == NULL) {
@@ -561,7 +559,8 @@ signed int main(signed int argc, char** argv) {
 			exit(0);
 		#else
 		//linux下直接关闭程序
-		exit(0);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+        exit(0);
 		#endif
     };
 
