@@ -560,8 +560,8 @@ signed int main(signed int argc, char** argv) {
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			exit(0);
 		#else
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-			exit(0);
+		//linux下直接关闭程序
+		exit(0);
 		#endif
     };
 
