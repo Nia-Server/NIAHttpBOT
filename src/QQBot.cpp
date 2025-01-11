@@ -686,7 +686,6 @@ void main_qqbot(httplib::Server &svr) {
 
 	//接收MC服务器的数据交换
 	svr.Post("/exchange_data", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(XX("MC服务器接收的数据为:") << req.body);
 		//解析字符串并创建一个json对象
 		rapidjson::Document exc_data;
 		exc_data.Parse(req.body.c_str());
@@ -706,7 +705,7 @@ void main_qqbot(httplib::Server &svr) {
 		rapidjson::Document groupMsgs;
 		groupMsgs.SetObject();
 
-		//添加形如2019-01-28 12:00:00的字符串time键值对
+		//添加time键值对
 		rapidjson::Value time(rapidjson::kStringType);
 		time.SetString("2019-01-28 12:00:00", groupMsgs.GetAllocator());
 		groupMsgs.AddMember("time", time, groupMsgs.GetAllocator());
@@ -726,6 +725,7 @@ void main_qqbot(httplib::Server &svr) {
 		groupMsgs["time"].SetString(now_time_str.c_str(), groupMsgs.GetAllocator());
 
 		for (const auto& msg : msgs) {
+			INFO(XX("MC服务器接收的数据为:") << req.body);
 			//创建single_msg对象
 			rapidjson::Value single_msg(rapidjson::kObjectType);
 
@@ -794,6 +794,7 @@ void main_qqbot(httplib::Server &svr) {
 			bool is_command = false;
 			bool is_reply = false;
 			std::string message = "";
+			std::string transfer_message = "";
 			std::string target_qq = "";
 			std::string reply_message_id = "";
 			const rapidjson::Value& raw_message_data = qq_event_data["message"];
@@ -811,11 +812,24 @@ void main_qqbot(httplib::Server &svr) {
 					if (type == "text") {
 						std::string text = data["text"].GetString();
 						message += text;
-						if (i == 0 && text[0] == '#') is_command = true;
+						if (i == 0 && text[0] == '#') {
+							is_command = true;
+							return ;
+						}
+						transfer_message += text;
 					}
 
 					if (type == "at") {
 						target_qq = data["qq"].GetString();
+						auto group_member_info = qqbot->get_group_member_info(group_id, target_qq, false);
+						std::string nickname = group_member_info.nickname;
+						std::string card = group_member_info.card;
+						if (card == "") {
+							transfer_message += "@" + nickname;
+						} else {
+							transfer_message += "@" + card;
+						}
+
 					}
 
 					if (type == "reply") {
@@ -826,9 +840,17 @@ void main_qqbot(httplib::Server &svr) {
 					if (type == "face") {
 						std::string face_id = data["id"].GetString();
 						message += "[face_id=" + face_id + "]";
+						transfer_message += "[表情]";
+
 					}
 
-					//暂时不处理图片消息
+					if (type == "image") {
+						transfer_message += "[图片]";
+					}
+
+					if (type == "file") {
+						transfer_message += "[文件] " + std::string(data["file"].GetString());
+					}
 
 
 				}
@@ -843,7 +865,7 @@ void main_qqbot(httplib::Server &svr) {
 					return ;
 				}
 				//发送警告消息
-				qqbot->send_group_message(group_id, "请注意发言规范！详情见 https://docs.mcnia.com/play-guide/regulation.html");
+				qqbot->send_group_message(group_id, "请注意发言规范！");
 				//撤回消息
 				auto delete_msg_res = qqbot->delete_msg(qq_event_data["message_id"].GetInt());
 				//判断撤回消息是否成功
@@ -887,8 +909,13 @@ void main_qqbot(httplib::Server &svr) {
 			}
 
 			//群消息转发
+			std::string nickname = qq_event_data["sender"]["nickname"].GetString();
 			std::string card = qq_event_data["sender"]["card"].GetString();
-			msgs.push_back("[群聊]<" + card + "> " + message);
+			if (card == "") {
+				msgs.push_back("§6[群聊] §r<" + nickname + "> " + transfer_message);
+			} else {
+				msgs.push_back("§6[群聊] §r<" + card + "> " + transfer_message);
+			}
 
 
 
