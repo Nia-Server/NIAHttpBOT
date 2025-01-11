@@ -422,6 +422,7 @@ signed int main(signed int argc, char** argv) {
         std::cout << "  stop - 关闭程序" << std::endl;
         std::cout << "  setcfg <cfgname> <cfgdata> - 设置配置项" << std::endl;
 		std::cout << "  startserver - 启动服务器(请在正确配置配置文件后使用)" << std::endl;
+		std::cout << "  mc <command> - 向服务器发送mc指令" << std::endl;
 		std::cout << "  stopserver - 关闭服务器(请在正确配置配置文件后使用)" << std::endl;
     };
 
@@ -494,9 +495,9 @@ signed int main(signed int argc, char** argv) {
 			command += "\n";
 			DWORD written;
 			if (!WriteFile(g_hChildStd_IN_Wr, command.c_str(), command.size(), &written, NULL)) {
-				WARN("向bedrock_server.exe发送命令失败,原因可能是未使用startserver启动服务器!");
+				WARN("向服务器发送命令失败,原因可能是未使用startserver启动服务器!");
 			} else {
-				INFO("已向bedrock_server.exe发送命令: " + command);
+				INFO("已向服务器发送命令: " + command);
 			}
 		#else
 			WARN("暂时不支持Linux系统下的执行mc指令功能!");
@@ -510,9 +511,9 @@ signed int main(signed int argc, char** argv) {
 			const char* command = "stop\n";
 			DWORD written;
 			if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-				WARN("向bedrock_server.exe发送stop命令失败,原因可能是未使用startserver启动服务器!");
+				WARN("向服务器发送stop命令失败,原因可能是未使用startserver启动服务器!");
 			} else {
-				INFO("已向bedrock_server.exe发送stop命令!");
+				INFO("已向服务器发送stop命令!");
 			}
 
 			// 等待子进程结束
@@ -534,13 +535,13 @@ signed int main(signed int argc, char** argv) {
         #ifdef _WIN32
 			// 检查 bedrock_server.exe 是否在运行
 			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-				INFO("检测到 bedrock_server.exe 正在运行，发送 stop 指令...");
+				INFO("检测到服务器正在运行，发送 stop 指令...");
 				const char* command = "stop\n";
 				DWORD written;
 				if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-					WARN("向 bedrock_server.exe 发送 stop 命令失败!");
+					WARN("向服务器发送 stop 命令失败!");
 				} else {
-					INFO("已向 bedrock_server.exe 发送 stop 命令!");
+					INFO("已向服务器发送 stop 命令!");
 				}
 
 				// 等待子进程结束
@@ -551,9 +552,9 @@ signed int main(signed int argc, char** argv) {
 				CloseHandle(pi.hThread);
 				CloseHandle(g_hChildStd_IN_Wr);
 				CloseHandle(g_hChildStd_IN_Rd);
-				INFO("bedrock_server.exe 已成功关闭!");
+				INFO("服务器已成功关闭!");
 			} else {
-				INFO("bedrock_server.exe 未运行，直接关闭程序...");
+				INFO("服务器未运行，直接关闭程序...");
 			}
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			exit(0);
