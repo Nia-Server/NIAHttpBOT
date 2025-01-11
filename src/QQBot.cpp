@@ -19,11 +19,13 @@ QQBot* qqbot;
 std::vector<std::string> forbiddenWords;
 std::vector<std::string> msgs;
 
-extern STARTUPINFO si;
-extern PROCESS_INFORMATION pi;
-extern SECURITY_ATTRIBUTES sa;
-extern HANDLE g_hChildStd_IN_Wr;
-extern HANDLE g_hChildStd_IN_Rd;
+#ifdef WIN32
+	extern STARTUPINFO si;
+	extern PROCESS_INFORMATION pi;
+	extern SECURITY_ATTRIBUTES sa;
+	extern HANDLE g_hChildStd_IN_Wr;
+	extern HANDLE g_hChildStd_IN_Rd;
+#endif
 
 struct command_addition_info {
     std::string group_id;
