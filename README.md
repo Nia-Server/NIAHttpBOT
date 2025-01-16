@@ -5,7 +5,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/Nia-Server/NIAHttpBOT?include_prereleases&style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/releases/latest)
 [![GitHub last commit](https://img.shields.io/github/last-commit/Nia-Server/NIAHttpBOT?style=for-the-badge)](https://github.com/Nia-Server/NIAHttpBOT/commits)
 
-![NiaServer-Core](https://socialify.git.ci/Nia-Server/NIAHttpBOT/image?description=1&descriptionEditable=NIA%E6%9C%8D%E5%8A%A1%E5%99%A8HttpBOT&font=Source%20Code%20Pro&forks=1&issues=1&logo=https://docs.mcnia.com/logo.png&name=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Auto)
+![NIAHttpBOT](https://socialify.git.ci/Nia-Server/NIAHttpBOT/image?description=1&descriptionEditable=%E5%9F%BA%E4%BA%8Ehttp%E4%B8%BABDS%E5%AE%9E%E7%8E%B0%E6%9B%B4%E5%A4%9A%E5%8F%AF%E8%83%BD&font=Source%20Code%20Pro&forks=1&issues=1&logo=https://docs.mcnia.com/logo.png&name=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Auto)
 
 
 ## 简介
@@ -43,7 +43,7 @@
 
 3. 如果您在使用期间遇到了问题/有建议，您可以前往**NIAHttpBOT**的[issues](https://github.com/Nia-Server/NIAHttpBOT/issues)进行反馈！
 
-4. 由于**采用的是http通讯，而非https**，我们**非常不推荐**您将NIAHttpBOT与基岩版服务端分开放置于两台服务器上，这是非常不安全的操作！请务必**将NiaHttpBOT与基岩版服务端放置于同一台服务器之上**，并**注意防火墙设置**，不要开放使用过程中涉及的两个端口，以免对服务器安全造成威胁！
+4. 由于**采用的是http通讯，而非https**，我们**非常不推荐**您将NIAHttpBOT与基岩版服务端分开放置于两台服务器上，这是非常不安全的操作！请务必**将NIAHttpBOT与基岩版服务端放置于同一台服务器之上**，并**注意防火墙设置**，不要开放使用过程中涉及的两个端口，以免对服务器安全造成威胁！
 
 ***
 

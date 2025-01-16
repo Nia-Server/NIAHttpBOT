@@ -1,6 +1,7 @@
 #ifndef QQBOT_H
 #define QQBOT_H
 
+#include <queue>
 #include <vector>
 #include <unordered_map>
 #include <string>

@@ -32,6 +32,7 @@ If you have any problems with this project, please contact the authors.
 #include <unordered_map>
 #include <functional>
 #include <sstream>
+#include <queue>
 
 
 #ifdef WIN32 //only enable TLS in windows
@@ -146,6 +147,15 @@ PROCESS_INFORMATION pi;
 SECURITY_ATTRIBUTES sa;
 HANDLE g_hChildStd_IN_Wr = NULL;
 HANDLE g_hChildStd_IN_Rd = NULL;
+HANDLE g_hChildStd_OUT_Rd = NULL;
+HANDLE g_hChildStd_OUT_Wr = NULL;
+
+//初始化一些变量
+bool isCommand = false;
+std::queue<std::string> g_McOutputQueue;
+std::mutex g_McOutputMutex;
+std::condition_variable g_McOutputCV;
+bool g_McOutputReady = false;
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     switch (dwCtrlType) {
@@ -171,6 +181,8 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
                 CloseHandle(pi.hThread);
                 CloseHandle(g_hChildStd_IN_Wr);
                 CloseHandle(g_hChildStd_IN_Rd);
+				CloseHandle(g_hChildStd_OUT_Wr);
+                CloseHandle(g_hChildStd_OUT_Rd);
                 INFO("bedrock_server.exe 已成功关闭!");
             } else {
                 INFO("bedrock_server.exe 未运行，直接关闭程序...");
@@ -336,6 +348,8 @@ signed int main(signed int argc, char** argv) {
 	// std::thread ssl_thread(sslThread);
 	// ssl_thread.detach();
 	sslThread();
+
+
 	#endif
 
 	//初始化服务器
@@ -420,7 +434,7 @@ signed int main(signed int argc, char** argv) {
         std::cout << "可用指令列表：" << std::endl;
         std::cout << "  reload - 重启程序" << std::endl;
         std::cout << "  stop - 关闭程序" << std::endl;
-        std::cout << "  setcfg <cfgname> <cfgdata> - 设置配置项" << std::endl;
+        // std::cout << "  setcfg <cfgname> <cfgdata> - 设置配置项" << std::endl;
 		std::cout << "  startserver - 启动服务器(请在正确配置配置文件后使用)" << std::endl;
 		std::cout << "  mc <command> - 向服务器发送mc指令" << std::endl;
 		std::cout << "  stopserver - 关闭服务器(请在正确配置配置文件后使用)" << std::endl;
@@ -443,40 +457,63 @@ signed int main(signed int argc, char** argv) {
 	commandMap["startserver"] = [&ServerLocate](const std::vector<std::string>&) {
 	#ifdef WIN32
 		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-			INFO("检测到 bedrock_server.exe 正在运行，无需重新启动！");
+			INFO("检测到服务器正在运行，无需重新启动！");
 		} else {
 			ZeroMemory(&si, sizeof(si));
 			si.cb = sizeof(si);
 			ZeroMemory(&pi, sizeof(pi));
 
-			// Create pipes for the child process's STDIN and STDOUT.
 			sa.nLength = sizeof(SECURITY_ATTRIBUTES);
 			sa.bInheritHandle = TRUE;
 			sa.lpSecurityDescriptor = NULL;
 
 			CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
 			SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
+			CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &sa, 0);
+        	SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
 
-			si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-			si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+			si.hStdError = g_hChildStd_OUT_Wr;
+            si.hStdOutput = g_hChildStd_OUT_Wr;
 			si.hStdInput = g_hChildStd_IN_Rd;
 			si.dwFlags |= STARTF_USESTDHANDLES;
 
-			// Start the child process.
 			if (!CreateProcess(NULL, const_cast<char*>(ServerLocate.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-				WARN("CreateProcess failed (" + std::to_string(GetLastError()) + ")");
+				WARN("服务器启动失败：" + std::to_string(GetLastError()));
 				return;
 			} else {
-				INFO("bedrock_server.exe已启动成功!");
+				INFO("服务器已启动成功!");
+				std::thread outThread([](){
+					char buffer[256];
+					DWORD bytesRead = 0;
+					while (true) {
+						if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
+							break;
+						}
+						std::string output(buffer, bytesRead);
+						std::cout.write(buffer, bytesRead);
+                        // 这里将输出转发到 g_McOutputQueue
+						if (isCommand) {
+                            std::lock_guard<std::mutex> lock(g_McOutputMutex);
+                            g_McOutputQueue.push(output);
+							g_McOutputReady = true;
+							g_McOutputCV.notify_one();
+							isCommand = false;
+							continue;
+						}
+						std::cout.flush();
+					}
+				});
+				outThread.detach();
+
 			}
 		}
 
 	#else
 		std::system(ServerLocate.c_str());
 		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
-			INFO("bedrock_server已成功启动!");
+			INFO("服务器已成功启动!");
 		} else {
-			WARN("bedrock_server启动失败!");
+			WARN("服务器启动失败!");
 		}
 	#endif
 	};
@@ -498,6 +535,15 @@ signed int main(signed int argc, char** argv) {
 				WARN("向服务器发送命令失败,原因可能是未使用startserver启动服务器!");
 			} else {
 				INFO("已向服务器发送命令: " + command);
+				isCommand = true;
+				std::unique_lock<std::mutex> lock(g_McOutputMutex);
+				if (g_McOutputCV.wait_for(lock, std::chrono::seconds(3), [] { return g_McOutputReady; })) {
+					while (!g_McOutputQueue.empty()) {
+						std::string line = g_McOutputQueue.front();
+						g_McOutputQueue.pop();
+					}
+					g_McOutputReady = false;
+				}
 			}
 		#else
 			WARN("暂时不支持Linux系统下的执行mc指令功能!");
@@ -524,7 +570,14 @@ signed int main(signed int argc, char** argv) {
 			CloseHandle(pi.hThread);
 			CloseHandle(g_hChildStd_IN_Wr);
 			CloseHandle(g_hChildStd_IN_Rd);
-			INFO("bedrock_server.exe已成功关闭!");
+			CloseHandle(g_hChildStd_OUT_Wr);
+			CloseHandle(g_hChildStd_OUT_Rd);
+			//检测bedrock_server.exe是否关闭
+			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+				WARN("服务器未成功关闭!");
+			} else {
+				INFO("服务器已成功关闭!");
+			}
 		#else
 			INFO("暂时不支持Linux系统下的关闭服务器功能!");
 		#endif
@@ -552,6 +605,8 @@ signed int main(signed int argc, char** argv) {
 				CloseHandle(pi.hThread);
 				CloseHandle(g_hChildStd_IN_Wr);
 				CloseHandle(g_hChildStd_IN_Rd);
+				CloseHandle(g_hChildStd_OUT_Wr);
+				CloseHandle(g_hChildStd_OUT_Rd);
 				INFO("服务器已成功关闭!");
 			} else {
 				INFO("服务器未运行，直接关闭程序...");

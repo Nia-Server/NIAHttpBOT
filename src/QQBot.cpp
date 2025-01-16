@@ -25,6 +25,13 @@ std::vector<std::string> msgs;
 	extern SECURITY_ATTRIBUTES sa;
 	extern HANDLE g_hChildStd_IN_Wr;
 	extern HANDLE g_hChildStd_IN_Rd;
+	extern HANDLE g_hChildStd_OUT_Rd;
+	extern HANDLE g_hChildStd_OUT_Wr;
+	extern bool isCommand;
+	extern std::queue<std::string> g_McOutputQueue;
+	extern std::mutex g_McOutputMutex;
+	extern std::condition_variable g_McOutputCV;
+	extern bool g_McOutputReady;
 #endif
 
 struct command_addition_info {
@@ -562,16 +569,17 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 			si.cb = sizeof(si);
 			ZeroMemory(&pi, sizeof(pi));
 
-			// Create pipes for the child process's STDIN and STDOUT.
 			sa.nLength = sizeof(SECURITY_ATTRIBUTES);
 			sa.bInheritHandle = TRUE;
 			sa.lpSecurityDescriptor = NULL;
 
 			CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
 			SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
+			CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &sa, 0);
+        	SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
 
-			si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-			si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+			si.hStdError = g_hChildStd_OUT_Wr;
+            si.hStdOutput = g_hChildStd_OUT_Wr;
 			si.hStdInput = g_hChildStd_IN_Rd;
 			si.dwFlags |= STARTF_USESTDHANDLES;
 
@@ -583,6 +591,28 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 			} else {
 				INFO("服务器已成功启动！");
 				qqbot->send_group_message(info.group_id, "服务器已成功启动！");
+				std::thread outThread([](){
+					char buffer[256];
+					DWORD bytesRead = 0;
+					while (true) {
+						if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
+							break;
+						}
+						std::string output(buffer, bytesRead);
+						std::cout.write(buffer, bytesRead);
+                        // 这里将输出转发到 g_McOutputQueue
+						if (isCommand) {
+                            std::lock_guard<std::mutex> lock(g_McOutputMutex);
+                            g_McOutputQueue.push(output);
+							g_McOutputReady = true;
+							g_McOutputCV.notify_one();
+							isCommand = false;
+							continue;
+						}
+						std::cout.flush();
+					}
+				});
+				outThread.detach();
 			}
 
 		}
@@ -600,6 +630,74 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 	#endif
 }
 
+//执行BDS服务器命令
+void executeServerCommand(const command_addition_info& info, const std::vector<std::string>& args) {
+	//判断执行者是否为管理员
+	if (info.sender_role != "admin" && info.sender_role  != "owner" && info.sender_qq != OwnerQQ) {
+		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
+		return ;
+	}
+	#ifdef _WIN32
+		if (args.size() < 1) {
+			qqbot->send_group_message(info.group_id, "执行命令指令格式错误，执行命令格式为:#CMD <命令>");
+			return;
+		}
+		//把args中的参数拼接成一个完整的命令
+		std::string command = args[0];
+		for (int i = 1; i < args.size(); i++) {
+			command += " " + args[i];
+		}
+		command += "\n";
+		//删去命令中的换行符并赋值给std_command
+		std::string std_command = command.substr(0, command.size() - 1);
+		//输出命令
+		DWORD written;
+		if (!WriteFile(g_hChildStd_IN_Wr, command.c_str(), command.size(), &written, NULL)) {
+			WARN("向服务器发送命令失败,原因可能是未使用startserver启动服务器!");
+			qqbot->send_group_message(info.group_id, "向服务器发送命令失败,原因可能是未使用startserver启动服务器!");
+		} else {
+			INFO("已向服务器发送命令: " + std_command);
+			isCommand = true;
+			qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + std_command);
+			std::unique_lock<std::mutex> lock(g_McOutputMutex);
+			if (g_McOutputCV.wait_for(lock, std::chrono::seconds(3), [] { return g_McOutputReady; })) {
+				while (!g_McOutputQueue.empty()) {
+					std::string line = g_McOutputQueue.front();
+					g_McOutputQueue.pop();
+					//删除line中的换行符
+					line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+					//删除line中的\r
+					line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+					//删除line中的[]所包含的内容
+					line = std::regex_replace(line, std::regex("\\[.*?\\]"), "");
+					//删除包括[]在内的所有字符
+					line.erase(std::remove(line.begin(), line.end(), '['), line.end());
+					line.erase(std::remove(line.begin(), line.end(), ']'), line.end());
+					//删除line开头的空格
+					line.erase(0, line.find_first_not_of(" "));
+					qqbot->send_group_message(info.group_id,"命令执行后返回：" + line);
+				}
+				g_McOutputReady = false;
+			} else {
+				WARN("服务器3s内无任何返回，命令返回捕捉超时");
+				qqbot->send_group_message(info.group_id, "服务器3s内无任何返回，命令返回捕捉超时");
+			}
+
+		}
+	#else
+		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
+			std::string command = "";
+			for (auto arg : args) {
+				command += arg + " ";
+			}
+			std::system(command.c_str());
+			qqbot->send_group_message(info.group_id, "已成功向服务器发送命令！");
+		} else {
+			qqbot->send_group_message(info.group_id, "服务器未运行，无法执行命令！");
+		}
+	#endif
+}
+
 //关闭BDS服务器
 void stopServer(const command_addition_info& info, const std::vector<std::string>& args) {
 	//判断执行者是否为管理员
@@ -612,7 +710,7 @@ void stopServer(const command_addition_info& info, const std::vector<std::string
 			const char* command = "stop\n";
 			DWORD written;
 			if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-				qqbot->send_group_message(info.group_id, "服务器关闭失败！请稍后再试！");
+				qqbot->send_group_message(info.group_id, "向服务器发送stop命令失败,原因可能是未使用startserver启动服务器!");
 				WARN("向服务器发送stop命令失败,原因可能是未使用startserver启动服务器!");
 			} else {
 				qqbot->send_group_message(info.group_id, "已成功向服务器发送stop命令！");
@@ -627,8 +725,16 @@ void stopServer(const command_addition_info& info, const std::vector<std::string
 			CloseHandle(pi.hThread);
 			CloseHandle(g_hChildStd_IN_Wr);
 			CloseHandle(g_hChildStd_IN_Rd);
-			qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
-			INFO("服务器已成功关闭!");
+			CloseHandle(g_hChildStd_OUT_Wr);
+			CloseHandle(g_hChildStd_OUT_Rd);
+			//检测bedrock_server.exe是否关闭
+			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+				qqbot->send_group_message(info.group_id, "服务器关闭失败，请稍后再试！");
+				WARN("服务器未成功关闭!");
+			} else {
+				qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
+				INFO("服务器已成功关闭!");
+			}
 		} else {
 			qqbot->send_group_message(info.group_id, "服务器未运行，无需关闭！");
 		}
@@ -662,7 +768,9 @@ std::unordered_map<std::string, CommandHandler> commandMap = {
 	{"查", queryPlayerInfo},
 	{"改权限", changeRole},
 	{"开服", startServer},
-	{"关服", stopServer}
+	{"关服", stopServer},
+	{"cmd", executeServerCommand},
+	{"CMD", executeServerCommand}
 };
 
 //读取违禁词列表

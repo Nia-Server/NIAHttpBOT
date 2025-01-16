@@ -26,18 +26,23 @@ int32_t QQBot::send_private_message(const std::string & user_id, const std::stri
 int32_t QQBot::send_group_message(const std::string & group_id, const std::string & message, bool auto_escape) {
     std::string auto_escape_str = auto_escape ? "true" : "false";
     auto res = cli.Post("/send_group_msg", "{\"group_id\":\"" + group_id + "\",\"message\":\"" + message + "\",\"auto_escape\":\"" + auto_escape_str +"\"}", "application/json");
-    if (res) {
+    if (res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
         if (doc.HasMember("status") && std::string(doc["status"].GetString()) == "ok" && doc.HasMember("data")) {
             return doc["data"]["message_id"].GetInt();
         } else {
-            WARN(XX("调用API <send_group_msg()> 后，返回的数据无法解析：") + res->body);
+            WARN("调用API <send_group_msg()> 后，返回的数据无法解析：" + res->body);
             return -1;
         }
-    } else {
-        WARN(XX("调用API <send_group_msg()> 超时，请检查连接！"));
+    } else if(res.value().status != 200) {
+        rapidjson::Document doc;
+        doc.Parse(res->body.c_str());
+        WARN("调用API <send_group_msg()> 后，状态码异常[" + std::to_string(res.value().status) + "]收到的数据："+ res->body.c_str());
         return -2;
+    }  else {
+        WARN("调用API <send_group_msg()> 超时，请检查连接！");
+        return -3;
     }
 
 }
