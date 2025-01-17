@@ -7,7 +7,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//检查文件是否存在
 	svr.Post("/CheckFile", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(XX("接收到检查文件是否存在的请求，请求检查的文件名称: ") << req.body);
+		INFO("接收到检查文件是否存在的请求，请求检查的文件名称: " << req.body << "\n");
 		std::ifstream file(req.body);
 		res.status = 200;
 		res.set_content(file?"true":"false", "text/plain");
@@ -27,7 +27,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//创建新的文件
 	svr.Post("/CreateNewFile", [](const httplib::Request& req, httplib::Response& res) {
-		XINFO("接收到创建文件的请求！ ");
+		INFO("接收到创建新文件的请求，请求创建的文件名称为：" << req.body << "\n");
 		//解析字符串并创建一个json对象
 		rapidjson::Document NewFileData;
 		NewFileData.Parse(req.body.c_str());
@@ -73,7 +73,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//创建新的json文件
 	svr.Post("/CreateNewJsonFile", [](const httplib::Request& req, httplib::Response& res) {
-		XINFO("接收到创建json文件的请求！ ");
+		INFO("接收到创建json文件的请求，请求获取的文件名称为：" << req.body << "\n");
 		//解析字符串并创建一个json对象
 		rapidjson::Document NewFileData;
 		NewFileData.Parse(req.body.c_str());
@@ -123,7 +123,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//获取文件数据
 	svr.Post("/GetFileData", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(XX("接收到获取文件数据的请求,请求获取的文件名称为： ") << req.body);
+		INFO("接收到获取文件数据的请求，请求获取的文件名称为：" << req.body << "\n");
 		//初始化文件名称
 		std::string fileName = req.body;
 		//判断文件存不存在
@@ -145,7 +145,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//获取json文件数据
 	svr.Post("/GetJsonFileData", [](const httplib::Request& req, httplib::Response& res) {
-		INFO(XX("接收到获取文件数据的请求,请求获取的文件名称为： ") << req.body);
+		INFO("接收到获取json文件数据的请求，请求获取的文件名称为：" << req.body << "\n");
 		//初始化文件名称
 		std::string fileName = req.body;
 		//判断文件存不存在
@@ -174,7 +174,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//向目标文件覆盖内容
 	svr.Post("/OverwriteFile",  [](const httplib::Request& req, httplib::Response& res) {
-		XINFO("接收到覆写文件的请求！");
+		INFO("接收到向目标文件覆盖内容的请求，请求覆盖的文件名称为：" << req.body << "\n");
 		//解析字符串并创建一个json对象
 		rapidjson::Document OverwriteFileData;
 		OverwriteFileData.Parse(req.body.c_str());
@@ -218,7 +218,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//覆盖json文件内容
 	svr.Post("/OverwriteJsonFile", [](const httplib::Request& req, httplib::Response& res) {
-		XINFO("接收到覆写 json 文件的请求！");
+		INFO("接受到覆盖json文件内容的请求，请求覆盖的文件名称为：" << req.body << "\n");
 		//解析字符串并创建一个json对象
 		rapidjson::Document overWriteFileData;
 		overWriteFileData.Parse(req.body.c_str());
@@ -269,7 +269,7 @@ void init_file_API(httplib::Server &svr) {
 
 	//向目标文件写入一行内容
 	svr.Post("/WriteLineToFile",  [](const httplib::Request& req, httplib::Response& res) {
-		XINFO("接收到向目标文件写入一行内容的请求！");
+		INFO("接收到向目标文件写入一行内容的请求，请求写入的文件名称为：" << req.body << "\n");
 		//解析字符串并创建一个json对象
 		rapidjson::Document WriteLineData;
 		WriteLineData.Parse(req.body.c_str());
@@ -312,7 +312,7 @@ void init_file_API(httplib::Server &svr) {
 	});
 
 	svr.Post("/CopyFolder", [](const httplib::Request& req, httplib::Response& res) {
-
+		INFO("接收到复制文件夹的请求，请求复制的文件夹名称为：" << req.body << "\n");
 		rapidjson::Document req_json;
 		req_json.Parse(req.body.c_str()), res.status = 400;
 		if(req_json.HasParseError()||!req_json.HasMember("Folder")||!req_json.HasMember("To")) [[unlikely]]
@@ -328,7 +328,7 @@ void init_file_API(httplib::Server &svr) {
 	});
 
 	svr.Post("/CopyFolderOverwrite", [](const httplib::Request& req, httplib::Response& res) {
-
+		INFO("接收到复制文件夹的请求，请求复制的文件夹名称为：" << req.body << "\n");
 		rapidjson::Document req_json;
 		req_json.Parse(req.body.c_str()), res.status = 400;
 		if(req_json.HasParseError()||!req_json.HasMember("Folder")||!req_json.HasMember("To")) [[unlikely]]
@@ -344,7 +344,7 @@ void init_file_API(httplib::Server &svr) {
 	});
 
 	svr.Post("/CopyFile", [](const httplib::Request& req, httplib::Response& res) {
-
+		INFO("接收到复制文件的请求，请求复制的文件名称为：" << req.body << "\n");
 		rapidjson::Document req_json;
 		req_json.Parse(req.body.c_str()), res.status = 400;
 		if(req_json.HasParseError()||!req_json.HasMember("File")||!req_json.HasMember("To")) [[unlikely]]
@@ -360,7 +360,7 @@ void init_file_API(httplib::Server &svr) {
 	});
 
 	svr.Post("/CopyFileOverwrite", [](const httplib::Request& req, httplib::Response& res) {
-
+		INFO("接收到复制文件的请求，请求复制的文件名称为：" << req.body << "\n");
 		rapidjson::Document req_json;
 		req_json.Parse(req.body.c_str()), res.status = 400;
 		if(req_json.HasParseError()||!req_json.HasMember("File")||!req_json.HasMember("To")) [[unlikely]]
