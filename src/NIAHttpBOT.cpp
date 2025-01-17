@@ -442,6 +442,29 @@ signed int main(signed int argc, char** argv) {
 
 	std::string programName = argv[0];
 	commandMap["reload"] = [programName](const std::vector<std::string>&) {
+		// 检查 bedrock_server.exe 是否在运行
+		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+			INFO("检测到服务器正在运行，发送 stop 指令...");
+			const char* command = "stop\n";
+			DWORD written;
+			if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
+				WARN("向服务器发送 stop 命令失败!");
+			} else {
+				INFO("已向服务器发送 stop 命令!");
+			}
+
+			// 等待子进程结束
+			WaitForSingleObject(pi.hProcess, INFINITE);
+
+			// 关闭进程和线程句柄
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+			CloseHandle(g_hChildStd_IN_Wr);
+			CloseHandle(g_hChildStd_IN_Rd);
+			CloseHandle(g_hChildStd_OUT_Wr);
+			CloseHandle(g_hChildStd_OUT_Rd);
+			INFO("服务器已成功关闭!");
+		}
         INFO("1s后重启程序..." );
         std::this_thread::sleep_for(std::chrono::seconds(1));
         #ifdef _WIN32
