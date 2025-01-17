@@ -67,12 +67,24 @@ If you have any problems with this project, please contact the authors.
 #define VERSION "v1.0.0-pre-2"
 
 #ifdef WIN32
+
 #define popen _popen
 #define pclose _pclose
 #define WEXITSTATUS
-#endif
 
-#ifdef WIN32
+STARTUPINFO si;
+PROCESS_INFORMATION pi;
+SECURITY_ATTRIBUTES sa;
+HANDLE g_hChildStd_IN_Wr = NULL;
+HANDLE g_hChildStd_IN_Rd = NULL;
+HANDLE g_hChildStd_OUT_Rd = NULL;
+HANDLE g_hChildStd_OUT_Wr = NULL;
+bool isCommand = false;
+std::queue<std::string> g_McOutputQueue;
+std::mutex g_McOutputMutex;
+std::condition_variable g_McOutputCV;
+bool g_McOutputReady = false;
+
 void sslThread(){
 	//与GitHub的API通信来检查更新
 	httplib::SSLClient cli("api.github.com");
@@ -142,20 +154,7 @@ void sslThread(){
 
 }
 
-STARTUPINFO si;
-PROCESS_INFORMATION pi;
-SECURITY_ATTRIBUTES sa;
-HANDLE g_hChildStd_IN_Wr = NULL;
-HANDLE g_hChildStd_IN_Rd = NULL;
-HANDLE g_hChildStd_OUT_Rd = NULL;
-HANDLE g_hChildStd_OUT_Wr = NULL;
 
-//初始化一些变量
-bool isCommand = false;
-std::queue<std::string> g_McOutputQueue;
-std::mutex g_McOutputMutex;
-std::condition_variable g_McOutputCV;
-bool g_McOutputReady = false;
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     switch (dwCtrlType) {
@@ -239,6 +238,7 @@ signed int main(signed int argc, char** argv) {
 
 	std::string LanguageFile = "";
 	std::string ServerLocate = "D:\\NiaServer-Core\\bedrock_server.exe";
+	bool AutoStartServer = false;
 	std::string IPAddress = "127.0.0.1";
 	int ServerPort = 10086;
 	bool UseCmd = false;
@@ -314,12 +314,13 @@ signed int main(signed int argc, char** argv) {
 	//首先检查有没有配置文件
 	if (!par.parFromFile("./NIAHttpBOT.cfg")) {
 		std::ofstream outcfgFile("NIAHttpBOT.cfg");
-		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = true\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"";
+		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = true\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"";
 		outcfgFile.close();
 		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
 	} else {
 		IPAddress = par.getString("IPAddress");
 		ServerLocate = par.getString("ServerLocate");
+		AutoStartServer = par.getBool("AutoStartServer");
 		ServerPort = par.getInt("ServerPort");
 		UseCmd = par.getBool("UseCmd");
 		UseQQBot = par.getBool("UseQQBot");
@@ -425,6 +426,71 @@ signed int main(signed int argc, char** argv) {
 	//初始化文件API
 	init_file_API(svr);
 
+	//启动服务器
+	if (AutoStartServer) {
+		#ifdef WIN32
+		INFO("正在启动BDS服务器...");
+		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+			INFO("检测到服务器正在运行，无需重新启动！");
+		} else {
+			ZeroMemory(&si, sizeof(si));
+			si.cb = sizeof(si);
+			ZeroMemory(&pi, sizeof(pi));
+
+			sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+			sa.bInheritHandle = TRUE;
+			sa.lpSecurityDescriptor = NULL;
+
+			CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
+			SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
+			CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &sa, 0);
+			SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
+
+			si.hStdError = g_hChildStd_OUT_Wr;
+			si.hStdOutput = g_hChildStd_OUT_Wr;
+			si.hStdInput = g_hChildStd_IN_Rd;
+			si.dwFlags |= STARTF_USESTDHANDLES;
+
+			if (!CreateProcess(NULL, const_cast<char*>(ServerLocate.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+				WARN("服务器启动失败：" + std::to_string(GetLastError()));
+			} else {
+				INFO("服务器已启动成功!");
+				std::thread outThread([](){
+					char buffer[256];
+					DWORD bytesRead = 0;
+					while (true) {
+						if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
+							break;
+						}
+						std::string output(buffer, bytesRead);
+						std::cout.write(buffer, bytesRead);
+						// 这里将输出转发到 g_McOutputQueue
+						if (isCommand) {
+							std::lock_guard<std::mutex> lock(g_McOutputMutex);
+							g_McOutputQueue.push(output);
+							g_McOutputReady = true;
+							g_McOutputCV.notify_one();
+							isCommand = false;
+							continue;
+						}
+						std::cout.flush();
+					}
+				});
+				outThread.detach();
+
+			}
+		}
+
+		#else
+		std::system(ServerLocate.c_str());
+		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
+			INFO("服务器已成功启动!");
+		} else {
+			WARN("服务器启动失败!");
+		}
+		#endif
+	}
+
 	//监听终端命令输入
 	using CommandHandler = std::function<void(const std::vector<std::string>&)>;
 
@@ -442,43 +508,51 @@ signed int main(signed int argc, char** argv) {
 
 	std::string programName = argv[0];
 	commandMap["reload"] = [programName](const std::vector<std::string>&) {
-		// 检查 bedrock_server.exe 是否在运行
-		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-			INFO("检测到服务器正在运行，发送 stop 指令...");
-			const char* command = "stop\n";
-			DWORD written;
-			if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-				WARN("向服务器发送 stop 命令失败!");
-			} else {
-				INFO("已向服务器发送 stop 命令!");
-			}
-
-			// 等待子进程结束
-			WaitForSingleObject(pi.hProcess, INFINITE);
-
-			// 关闭进程和线程句柄
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-			CloseHandle(g_hChildStd_IN_Wr);
-			CloseHandle(g_hChildStd_IN_Rd);
-			CloseHandle(g_hChildStd_OUT_Wr);
-			CloseHandle(g_hChildStd_OUT_Rd);
-			INFO("服务器已成功关闭!");
-		}
         INFO("1s后重启程序..." );
         std::this_thread::sleep_for(std::chrono::seconds(1));
         #ifdef _WIN32
-        std::system(("start cmd /k " + std::string(programName)).c_str());
+			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
+				INFO("检测到服务器正在运行，发送 stop 指令...");
+				const char* command = "stop\n";
+				DWORD written;
+				if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
+					WARN("向服务器发送 stop 命令失败!");
+				} else {
+					INFO("已向服务器发送 stop 命令!");
+				}
+
+				// 等待子进程结束
+				WaitForSingleObject(pi.hProcess, INFINITE);
+
+				// 关闭进程和线程句柄
+				CloseHandle(pi.hProcess);
+				CloseHandle(pi.hThread);
+				CloseHandle(g_hChildStd_IN_Wr);
+				CloseHandle(g_hChildStd_IN_Rd);
+				CloseHandle(g_hChildStd_OUT_Wr);
+				CloseHandle(g_hChildStd_OUT_Rd);
+				INFO("服务器已成功关闭!");
+			}
+			STARTUPINFOA si2;
+			PROCESS_INFORMATION pi2;
+			ZeroMemory(&si2, sizeof(si2));
+			si2.cb = sizeof(si2);
+			ZeroMemory(&pi2, sizeof(pi2));
+			if(!CreateProcessA(programName.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si2, &pi2)) {
+				WARN("重新启动进程失败：" + std::to_string(GetLastError()));
+			} else {
+				INFO("已成功重新启动进程!");
+			}
         #else
-        if (fork() == 0) {
-            execl(programName.c_str(), programName.c_str(), (char*)NULL);
-        }
+			if (fork() == 0) {
+				execl(programName.c_str(), programName.c_str(), (char*)NULL);
+			}
         #endif
         exit(0);
     };
 
 	commandMap["startserver"] = [&ServerLocate](const std::vector<std::string>&) {
-	#ifdef WIN32
+		#ifdef WIN32
 		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
 			INFO("检测到服务器正在运行，无需重新启动！");
 		} else {
@@ -493,10 +567,10 @@ signed int main(signed int argc, char** argv) {
 			CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
 			SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
 			CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &sa, 0);
-        	SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
+			SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
 
 			si.hStdError = g_hChildStd_OUT_Wr;
-            si.hStdOutput = g_hChildStd_OUT_Wr;
+			si.hStdOutput = g_hChildStd_OUT_Wr;
 			si.hStdInput = g_hChildStd_IN_Rd;
 			si.dwFlags |= STARTF_USESTDHANDLES;
 
@@ -514,10 +588,10 @@ signed int main(signed int argc, char** argv) {
 						}
 						std::string output(buffer, bytesRead);
 						std::cout.write(buffer, bytesRead);
-                        // 这里将输出转发到 g_McOutputQueue
+						// 这里将输出转发到 g_McOutputQueue
 						if (isCommand) {
-                            std::lock_guard<std::mutex> lock(g_McOutputMutex);
-                            g_McOutputQueue.push(output);
+							std::lock_guard<std::mutex> lock(g_McOutputMutex);
+							g_McOutputQueue.push(output);
 							g_McOutputReady = true;
 							g_McOutputCV.notify_one();
 							isCommand = false;
@@ -530,15 +604,14 @@ signed int main(signed int argc, char** argv) {
 
 			}
 		}
-
-	#else
+		#else
 		std::system(ServerLocate.c_str());
 		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
 			INFO("服务器已成功启动!");
 		} else {
 			WARN("服务器启动失败!");
 		}
-	#endif
+		#endif
 	};
 
 	commandMap["mc"] = [](const std::vector<std::string>& args) {
