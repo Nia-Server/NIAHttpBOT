@@ -8,6 +8,7 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    if: ${{ !contains(github.ref, 'pre') }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -26,6 +27,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref, 'pre') }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
