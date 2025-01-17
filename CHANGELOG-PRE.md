@@ -8,15 +8,20 @@
 
 > **未完成开发版本提醒**：该版本**部分功能仍然在开发状态中**，可能出现包括但不限于**服务器存档损坏**等问题，仅供开发者预览，请勿使用！
 
+## 优化
+
+Logger日志头输出样式
+
 ## 新增
 
 1. **startserver** 指令，用于启动BDS服务器
-2. **mc** 指令，用于执行Minecraft指令(当前版本仅windows支持)
+2. **mc** 指令，用于执行BDS服务器中指令(当前版本仅windows支持)
 3. **stopserver** 指令，用于停止BDS服务器(当前版本仅windows支持)
 4. QQBOT新增**开服、关服、cmd**指令，用于控制BDS服务器(当前版本仅windows支持)
+5. 搭配**NiaServer-Core v1.5.0-pre-4**及以上版本使用，可以实现MC服务器与QQ群间的消息互通
 
 ## 修复
 
-1. 调用QQBOT_API时，部分情况传回400错误而导致NIAHttpBOT崩溃的问题
+调用QQBOT_API时，部分情况传回400错误而导致NIAHttpBOT崩溃的问题
 
 **配置说明：您可以前往[NIA服务器官方文档站](https://docs.mcnia.com/dev/Http-Bot.html)查看具体部署过程！**
