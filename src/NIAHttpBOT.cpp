@@ -64,7 +64,7 @@ If you have any problems with this project, please contact the authors.
 #include "OBJ_Loader.h"
 
 //定义版本号
-#define VERSION "v1.0.0-pre-2"
+#define VERSION "v1.0.0-pre-3"
 
 #ifdef WIN32
 
