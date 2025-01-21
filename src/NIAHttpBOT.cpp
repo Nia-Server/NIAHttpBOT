@@ -258,6 +258,7 @@ signed int main(signed int argc, char** argv) {
 		HANDLE hMutex = CreateMutex(NULL, FALSE, "NIAHttpBOT");
 		if (hMutex == NULL) {
 			WARN("CreateMutex failed!");
+			std::this_thread::sleep_for(std::chrono::seconds(3));
 			return 1;
 		}
 		if (GetLastError() == ERROR_ALREADY_EXISTS) {
@@ -270,6 +271,7 @@ signed int main(signed int argc, char** argv) {
 		int fd = open("lockfile", O_RDWR | O_CREAT, 0666);
 		if (fd < 0) {
 			WARN("open lockfile failed");
+			std::this_thread::sleep_for(std::chrono::seconds(3));
 			return 1;
 		}
 		if (lockf(fd, F_TLOCK, 0) < 0) {
@@ -314,7 +316,7 @@ signed int main(signed int argc, char** argv) {
 	//首先检查有没有配置文件
 	if (!par.parFromFile("./NIAHttpBOT.cfg")) {
 		std::ofstream outcfgFile("NIAHttpBOT.cfg");
-		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = true\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"";
+		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = true\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"\n\n\n";
 		outcfgFile.close();
 		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
 	} else {
@@ -458,12 +460,34 @@ signed int main(signed int argc, char** argv) {
 				std::thread outThread([](){
 					char buffer[256];
 					DWORD bytesRead = 0;
+					std::string a1, a2;
+					a2.clear();
 					while (true) {
+						a1.clear();
 						if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
 							break;
 						}
 						std::string output(buffer, bytesRead);
-						std::cout.write(buffer, bytesRead);
+						a2+=output;
+						for(int i=0;a2[i];i++){
+							a1+=a2[i];
+							if(a2[i]=='\n') {
+								a2 = a2.substr(i+1);
+								break;
+							}
+						}
+						if(a1[0]=='['&&a1[1]=='2'&&a1[a1.size()-1]=='\n')
+						SYNC(std::cout)<<([](const std::string& a) -> std::string {
+						
+								std::string res;
+								res += (std::string)"\x1b[35m[" 
+									+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
+								   	+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
+									+ "] \x1b[0m" + "\x1b[32m[INFO]\x1b[0m "
+									+ a.substr(31);
+								return res;
+							})(a1);
+						else SYNC(std::cout)<<'\0';
 						// 这里将输出转发到 g_McOutputQueue
 						if (isCommand) {
 							std::lock_guard<std::mutex> lock(g_McOutputMutex);

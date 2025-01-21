@@ -126,6 +126,19 @@ private:
         return std::make_pair(true, pre*num);
     }
 
+    std::pair<bool, int64_t> matchInt64(const std::string& str, int idx) { // TODO: need to support more formats of number
+        int64_t num = 0;
+        int pre = 1;
+        if(str[idx]=='-') pre=-1, idx++;
+        if(idx>=str.size() || !IS_DIGIT(str[idx])) return std::make_pair(false, 0);
+        for(int i=idx; i<str.size(); i++) {
+            if(IS_SPACE(str[i])||str[i]=='\n') break; 
+            if(!IS_DIGIT(str[i])) return std::make_pair(false, 0);
+            num*=10, num+=str[i]-'0';
+        }
+        return std::make_pair(true, pre*num);
+    }
+
     // TODO: parse float or double number
 
     std::pair<bool, char> matchChar(const std::string& str, int idx) {
