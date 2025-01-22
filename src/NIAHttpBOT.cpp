@@ -420,7 +420,7 @@ signed int main(signed int argc, char** argv) {
 
 
 	//qq机器人主函数
-	main_qqbot(svr);
+	//main_qqbot(svr);
 
 	//初始化游戏API
 	init_game_API(svr);
@@ -462,45 +462,56 @@ signed int main(signed int argc, char** argv) {
 					DWORD bytesRead = 0;
 					std::string a1, a2;
 					a2.clear();
+					int tot1 = 0, tot2 = 0;;
+        			//std::this_thread::sleep_for(std::chrono::milliseconds(500));
 					while (true) {
-						a1.clear();
+						
 						if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
 							break;
 						}
 						std::string output(buffer, bytesRead);
 						a2+=output;
+						std::vector<int> vec;
 						for(int i=0;a2[i];i++){
-							a1+=a2[i];
-							if(a2[i]=='\n') {
-								a2 = a2.substr(i+1);
-								break;
-							}
+							if(a2[i]=='\n')  vec.push_back(i);
 						}
-						if(a1[0]=='['&&a1[1]=='2'&&a1[a1.size()-1]=='\n')
-						SYNC(std::cout)<<([](const std::string& a) -> std::string {
+						for (int i=0, last=0; i<vec.size(); i++){
+							a1 = a2.substr(last, vec[i]-last+1);
+							last = vec[i]+1;
+							if(a1[0]=='['&&a1[1]=='2'&&a1[a1.size()-1]=='\n')
+							SYNC(std::cout)<<([](const std::string& a) -> std::string {
+							
+									std::string res;
+									if(a[25]=='I')
+										res += (std::string)"\x1b[35m[" 
+										+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
+										+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
+										+ "] \x1b[0m" + "\x1b[32m[INFO]\x1b[0m "
+										+ a.substr(31);
+									else if(a[25]=='W')
+										res += (std::string)"\x1b[35m[" 
+										+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
+										+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
+										+ "] \x1b[0m" + "\x1b[43;1m[WARN]\x1b[0m "
+										+ a.substr(31);
+									else if(a[25]=='E')
+										res += (std::string)"\x1b[35m[" 
+										+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
+										+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
+										+ "] \x1b[0m" + "\x1b[41;1m[FAIL]\x1b[0m "
+										+ a.substr(31);
+									
+									//if(a[32]=='S' && a[a.size()-1]==a[a.size()-2]) res.pop_back();
+
+									return res;
+								})(a1), tot1++;
+							else if(a1.size()>=5&&a1[a1.size()-1]=='\n')SYNC(std::cout)<<a1, tot1++;
+							
+						}
+
 						
-								std::string res;
-								if(a[25]=='I')
-									res += (std::string)"\x1b[35m[" 
-									+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
-								   	+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
-									+ "] \x1b[0m" + "\x1b[32m[INFO]\x1b[0m "
-									+ a.substr(31);
-								else if(a[25]=='W')
-									res += (std::string)"\x1b[35m[" 
-									+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
-								   	+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
-									+ "] \x1b[0m" + "\x1b[43;1m[WARN]\x1b[0m "
-									+ a.substr(31);
-								else if(a[25]=='E')
-									res += (std::string)"\x1b[35m[" 
-									+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
-								   	+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
-									+ "] \x1b[0m" + "\x1b[41;1m[FAIL]\x1b[0m "
-									+ a.substr(31);
-								return res;
-							})(a1);
-						else SYNC(std::cout)<<'\0';
+							a2 = a2.substr(vec[vec.size()-1], a2.size()-vec[vec.size()-1]);
+						tot2++;
 						// 这里将输出转发到 g_McOutputQueue
 						if (isCommand) {
 							std::lock_guard<std::mutex> lock(g_McOutputMutex);
@@ -539,6 +550,7 @@ signed int main(signed int argc, char** argv) {
         std::cout << "  stop - 关闭程序" << std::endl;
         // std::cout << "  setcfg <cfgname> <cfgdata> - 设置配置项" << std::endl;
 		std::cout << "  startserver - 启动服务器(请在正确配置配置文件后使用)" << std::endl;
+		
 		std::cout << "  mc <command> - 向服务器发送mc指令" << std::endl;
 		std::cout << "  stopserver - 关闭服务器(请在正确配置配置文件后使用)" << std::endl;
     };
