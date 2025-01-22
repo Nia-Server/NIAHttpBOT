@@ -635,7 +635,7 @@ void loadForbiddenWords(const std::string& filename) {
 		file << "test\n";
 		file.close();
 		//向控制台输出警告
-		WARN("违禁词文件不存在，已自动创建！请编辑违禁词文件！文件名称为：" + filename);
+		WARN("违禁词文件不存在，已自动创建。请编辑违禁词文件，文件名称为：" + filename);
 	}
 	//文件打开成功，读取文件内容
     std::string word;
@@ -658,7 +658,7 @@ void loadForbiddenWords(const std::string& filename) {
 		count++;
     }
 	//向控制台输出
-	INFO("已成功加载" + std::to_string(count) + "个违禁词！");
+	INFO("已成功加载" + std::to_string(count) + "个违禁词");
 }
 
 //判断消息是否包含违禁词
@@ -674,10 +674,9 @@ bool containsForbiddenWords(const std::string& input) {
 //主函数
 void main_qqbot(httplib::Server &svr) {
 	if (!UseQQBot) {
-		WARN("未启用QQ机器人相关功能！");
 		return;
 	};
-	INFO("已启用QQ机器人相关功能！");
+	INFO("已启用QQ机器人相关功能");
 
     //初始化qqbot
     qqbot = new QQBot(IPAddress, ClientPort);
@@ -685,12 +684,12 @@ void main_qqbot(httplib::Server &svr) {
 	auto get_status_res = qqbot->get_status();
 	//检查是否成功连接到QQ机器人
 	if (get_status_res.status == 1) {
-		INFO("已成功连接到QQ机器人！");
+		INFO("已成功连接到QQ机器人");
 		//加载违禁词列表
 		loadForbiddenWords("ForbiddenWords.txt");
 	} else {
-		WARN("QQ机器人连接失败！请检查QQ机器人是否已启动&&配置是否正确！");
-		WARN("如需更多帮助请前往 https://docs.mcnia.com/dev/Http-Bot.html 查看！");
+		FAIL("QQ机器人连接失败，请检查QQ机器人是否已启动&&配置是否正确！");
+		FAIL("如需更多帮助请前往 https://docs.mcnia.com/dev/NIAHttpBOT.html 查看！");
 		return;
 	}
 
@@ -702,7 +701,7 @@ void main_qqbot(httplib::Server &svr) {
 		player_data_file << "{}";
 		player_data_file.close();
 		//向控制台输出
-		WARN("player_data.json文件不存在，已自动创建！");
+		WARN("player_data.json文件不存在，已自动创建");
 	}
 
 	//获取群列表
@@ -718,10 +717,10 @@ void main_qqbot(httplib::Server &svr) {
 	//如果指定的QQ群不存在
 	if (!isGroupExist) {
 		//向控制台输出
-		WARN(XX("没有在机器人的群列表中找到指定的QQ群：") + QQGroup);
+		WARN("没有在机器人的群列表中找到指定的QQ群：" + QQGroup);
 	} else {
 		//向控制台输出
-		INFO(XX("机器人监听已在指定QQ群开启：") + QQGroup);
+		INFO("机器人监听已在指定QQ群开启：" + QQGroup);
 		//开始检测机器人在指定的QQ群中的权限
 		//获取机器人自己的QQ号
 		auto get_login_info_res = qqbot->get_login_info();
@@ -730,13 +729,13 @@ void main_qqbot(httplib::Server &svr) {
 		auto get_group_member_info_res = qqbot->get_group_member_info(QQGroup, selfQQ);
 		std::string selfPermission = get_group_member_info_res.role;
 		//向控制台输出
-		INFO(XX("机器人在指定QQ群中的权限为：") << selfPermission);
+		INFO("机器人在指定QQ群中的权限为：" << selfPermission);
 		//如果机器人在指定QQ群中的权限不是管理员或者群主
 		if (selfPermission != "admin" && selfPermission != "owner") {
 			//向控制台输出
-			WARN(XX("机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主！"));
+			WARN("机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主");
 			//向指定QQ群发送消息
-			qqbot->send_group_message(QQGroup, "机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主！");
+			qqbot->send_group_message(QQGroup, "机器人在指定QQ群中的权限不足,部分功能可能受限，如果要使用完整功能，请将机器人设置为管理员或者群主");
 		}
 	}
 

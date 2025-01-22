@@ -65,7 +65,7 @@ If you have any problems with this project, please contact the authors.
 #include "OBJ_Loader.h"
 
 //定义版本号
-#define VERSION "v1.0.0-pre-3"
+#define VERSION "v1.0.0"
 
 
 std::string LanguageFile = "";
@@ -74,7 +74,7 @@ bool AutoStartServer = false;
 std::string IPAddress = "127.0.0.1";
 int ServerPort = 10086;
 bool UseCmd = false;
-bool UseQQBot = true;
+bool UseQQBot = false;
 int ClientPort = 10023;
 std::string Locate = "/qqEvent";
 std::string OwnerQQ = "123456789";
@@ -137,20 +137,20 @@ void sslThread(){
 		if (is_latest_greater) {
 			//如果是预发布版本，输出警告
 			if (latest_version.find("-pre-") != std::string::npos) {
-				WARN("检查更新成功，当前github的release最新版本为：" + latest_version + "，当前版本为：" + VERSION + "，但请注意，这是一个预发布版本！可能存在未知的问题，请根据实际情况更新！");
+				WARN("检查更新成功，当前github的release最新版本为：" + latest_version + "，当前版本为：" + VERSION + "，但请注意，这是一个预发布版本。可能存在未知的问题，请根据实际情况更新");
 			} else {
-				WARN("检查更新成功，当前github的release最新版本为：" + latest_version + "，当前版本为：" + VERSION + "，请及时更新！");
+				WARN("检查更新成功，当前github的release最新版本为：" + latest_version + "，当前版本为：" + VERSION + "，请及时更新");
 			}
 			//向控制台输出最新版本release更新日志
 			INFO(changelog);
 			INFO("下载地址：" + download_url);
 		} else {
-			INFO("检查更新成功！当前版本已是最新版本！");
+			INFO("检查更新成功，当前版本已是最新版本");
 		}
 	} else {
 		//向控制台输出错误状态码
-		WARN("检查更新失败！错误状态码：" + res->status);
-		WARN("检查更新失败！");
+		WARN("检查更新失败，错误状态码：" + res->status);
+		WARN("检查更新失败");
 	}
 
 }
@@ -256,16 +256,16 @@ signed int main(signed int argc, char** argv) {
 	)" <<"\x1b[0m"<< std::endl;
 
 	CFGPAR::parser par;
-
+	INFO("当前版本：" + std::string(VERSION) + " 构建时间: " + std::string(__DATE__) + " " + std::string(__TIME__));
 	//解析版本号，如果版本号后面有-pre-则输出警告这是一个预览版本
 	if (std::string(VERSION).find("-pre-") != std::string::npos) {
-		WARN("这是一个预发布版本，仅供开发者预览，不要在正式生产环境中使用！");
+		WARN("这是一个预发布版本，仅供开发者预览，不要在正式生产环境中使用");
 	}
 
 	//首先检查有没有配置文件
 	if (!par.parFromFile("./NIAHttpBOT.cfg")) {
 		std::ofstream outcfgFile("NIAHttpBOT.cfg");
-		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = true\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"\n\n\n";
+		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = false\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"\n\n\n";
 		outcfgFile.close();
 		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
 	} else {
@@ -279,21 +279,21 @@ signed int main(signed int argc, char** argv) {
 		Locate = par.getString("Locate");
 		OwnerQQ = par.getString("OwnerQQ");
 		QQGroup = par.getString("QQGroup");
-		INFO("已成功读取配置文件！");
+		INFO("已成功读取配置文件");
 		if(!par.hasKey("LanguageFile") || !par.getString("LanguageFile").size()) INFO("已使用默认语言");
 		else if(!i18n.loadFromFile(par.getString("LanguageFile"))) WARN("语言文件加载失败");
 		else XINFO("语言配置已加载成功");
 	}
 
-	INFO(XX("sapi事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + XX(" 上成功启动!"));
+	INFO(XX("sapi事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + XX(" 上成功启动"));
 	if (UseQQBot) {
-		INFO(XX("qq-bot事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + Locate + XX(" 上成功启动!"));
-		INFO(XX("qq-bot客户端已在 ") + IPAddress + ":" + std::to_string(ClientPort) + XX(" 上成功启动!"));
+		INFO(XX("qq-bot事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + Locate + XX(" 上成功启动"));
+		INFO(XX("qq-bot客户端已在 ") + IPAddress + ":" + std::to_string(ClientPort) + XX(" 上成功启动"));
 	}
 	XINFO("项目地址：https://github.com/Nia-Server/NIAHttpBOT/");
 	XINFO("项目作者：@NIANIANKNIA @jiansyuan");
-	XINFO("在使用中遇到问题请前往项目下的 issue 反馈，如果觉得本项目不错不妨点个 star！");
-	if (UseCmd)  XWARN("检测到执行DOS命令功能已启用，请注意服务器安全！");
+	XINFO("在使用中遇到问题请前往项目下的 issue 反馈，如果觉得本项目不错不妨点个 star");
+	if (UseCmd)  XWARN("检测到执行DOS命令功能已启用，请注意服务器安全");
 
 
 	#ifdef WIN32
@@ -342,7 +342,7 @@ signed int main(signed int argc, char** argv) {
 	svr.Post("/RunCmd",  [](const httplib::Request& req, httplib::Response& res) {
 		//首先判断配置文件是否启用
 		if (!UseCmd) [[unlikely]] {
-			XWARN("执行DOS命令的功能暂未启用！请在启用后使用！");
+			XWARN("执行DOS命令的功能暂未启用，请在启用后使用");
 			res.set_content("feature not enabled!", "text/plain");
 			return ;
 		}
