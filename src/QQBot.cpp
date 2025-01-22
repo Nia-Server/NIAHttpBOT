@@ -553,16 +553,7 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 			StartServer();
 		}
 	#else
-		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
-			qqbot->send_group_message(info.group_id, "服务器已经在运行中，无需重新启动！");
-		} else {
-			std::system(ServerLocate.c_str());
-			if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
-				qqbot->send_group_message(info.group_id, "服务器已成功启动！");
-			} else {
-				qqbot->send_group_message(info.group_id, "服务器启动失败！请检查服务器文件是否存在！");
-			}
-		}
+		qqbot->send_group_message(info.group_id, "该功能暂不支持Linux系统！");
 	#endif
 }
 
@@ -604,7 +595,7 @@ void stopServer(const command_addition_info& info, const std::vector<std::string
 		return ;
 	}
 	qqbot->send_group_message(info.group_id, "已成功向服务器发送stop命令！");
-	BOOL result = StopServer();
+	bool result = StopServer();
 	if (result) {
 		qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
 	} else {
