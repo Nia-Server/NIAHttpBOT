@@ -17,6 +17,7 @@
 #include "CFG_Parser.hpp"
 #include "I18Nize.hpp"
 #include "Logger.hpp"
+#include "BDS_API.h"
 
 
 

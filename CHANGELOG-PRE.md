@@ -10,7 +10,7 @@
 
 ## 优化
 
-Logger日志头输出样式
+ctrl+c关闭NIAHttpBOT时，会自动关闭BDS服务器
 
 ## 新增
 

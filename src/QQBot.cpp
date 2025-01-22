@@ -5,34 +5,19 @@
 CFGPAR::parser par;
 
 //获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,ClientPort
-std::string ServerLocate;
-std::string Locate;
-bool UseQQBot;
-std::string OwnerQQ;
-std::string QQGroup;
-std::string IPAddress;
-int ClientPort;
+extern std::string ServerLocate;
+extern std::string Locate;
+extern bool UseQQBot;
+extern std::string OwnerQQ;
+extern std::string QQGroup;
+extern std::string IPAddress;
+extern int ClientPort;
 
 //声明qqbot
 QQBot* qqbot;
 
 std::vector<std::string> forbiddenWords;
 std::vector<std::string> msgs;
-
-#ifdef WIN32
-	extern STARTUPINFO si;
-	extern PROCESS_INFORMATION pi;
-	extern SECURITY_ATTRIBUTES sa;
-	extern HANDLE g_hChildStd_IN_Wr;
-	extern HANDLE g_hChildStd_IN_Rd;
-	extern HANDLE g_hChildStd_OUT_Rd;
-	extern HANDLE g_hChildStd_OUT_Wr;
-	extern bool isCommand;
-	extern std::queue<std::string> g_McOutputQueue;
-	extern std::mutex g_McOutputMutex;
-	extern std::condition_variable g_McOutputCV;
-	extern bool g_McOutputReady;
-#endif
 
 struct command_addition_info {
     std::string group_id;
@@ -565,56 +550,7 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
 			qqbot->send_group_message(info.group_id, "服务器已经在运行中，无需重新启动！");
 		} else {
-			ZeroMemory(&si, sizeof(si));
-			si.cb = sizeof(si);
-			ZeroMemory(&pi, sizeof(pi));
-
-			sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-			sa.bInheritHandle = TRUE;
-			sa.lpSecurityDescriptor = NULL;
-
-			CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
-			SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
-			CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &sa, 0);
-        	SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
-
-			si.hStdError = g_hChildStd_OUT_Wr;
-            si.hStdOutput = g_hChildStd_OUT_Wr;
-			si.hStdInput = g_hChildStd_IN_Rd;
-			si.dwFlags |= STARTF_USESTDHANDLES;
-
-			// Start the child process.
-			if (!CreateProcess(NULL, const_cast<char*>(ServerLocate.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-				qqbot->send_group_message(info.group_id, "服务器启动失败！失败原因：" + std::to_string(GetLastError()));
-				WARN("服务器启动失败 (" + std::to_string(GetLastError()) + ")");
-				return;
-			} else {
-				INFO("服务器已成功启动！");
-				qqbot->send_group_message(info.group_id, "服务器已成功启动！");
-				std::thread outThread([](){
-					char buffer[256];
-					DWORD bytesRead = 0;
-					while (true) {
-						if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
-							break;
-						}
-						std::string output(buffer, bytesRead);
-						std::cout.write(buffer, bytesRead);
-                        // 这里将输出转发到 g_McOutputQueue
-						if (isCommand) {
-                            std::lock_guard<std::mutex> lock(g_McOutputMutex);
-                            g_McOutputQueue.push(output);
-							g_McOutputReady = true;
-							g_McOutputCV.notify_one();
-							isCommand = false;
-							continue;
-						}
-						std::cout.flush();
-					}
-				});
-				outThread.detach();
-			}
-
+			StartServer();
 		}
 	#else
 		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
@@ -647,54 +583,16 @@ void executeServerCommand(const command_addition_info& info, const std::vector<s
 		for (int i = 1; i < args.size(); i++) {
 			command += " " + args[i];
 		}
-		command += "\n";
 		//删去命令中的换行符并赋值给std_command
-		std::string std_command = command.substr(0, command.size() - 1);
+		std::string std_command = command;
+		std_command.erase(std::remove(std_command.begin(), std_command.end(), '\n'), std_command.end());
+		qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + std_command);
 		//输出命令
-		DWORD written;
-		if (!WriteFile(g_hChildStd_IN_Wr, command.c_str(), command.size(), &written, NULL)) {
-			WARN("向服务器发送命令失败,原因可能是未使用startserver启动服务器!");
-			qqbot->send_group_message(info.group_id, "向服务器发送命令失败,原因可能是未使用startserver启动服务器!");
-		} else {
-			INFO("已向服务器发送命令: " + std_command);
-			isCommand = true;
-			qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + std_command);
-			std::unique_lock<std::mutex> lock(g_McOutputMutex);
-			if (g_McOutputCV.wait_for(lock, std::chrono::seconds(3), [] { return g_McOutputReady; })) {
-				while (!g_McOutputQueue.empty()) {
-					std::string line = g_McOutputQueue.front();
-					g_McOutputQueue.pop();
-					//删除line中的换行符
-					line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
-					//删除line中的\r
-					line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-					//删除line中的[]所包含的内容
-					line = std::regex_replace(line, std::regex("\\[.*?\\]"), "");
-					//删除包括[]在内的所有字符
-					line.erase(std::remove(line.begin(), line.end(), '['), line.end());
-					line.erase(std::remove(line.begin(), line.end(), ']'), line.end());
-					//删除line开头的空格
-					line.erase(0, line.find_first_not_of(" "));
-					qqbot->send_group_message(info.group_id,"命令执行后返回：" + line);
-				}
-				g_McOutputReady = false;
-			} else {
-				WARN("服务器3s内无任何返回，命令返回捕捉超时");
-				qqbot->send_group_message(info.group_id, "服务器3s内无任何返回，命令返回捕捉超时");
-			}
-
-		}
+		std::string cmd_result = runCommand(command);
+		//输出结果
+		qqbot->send_group_message(info.group_id, cmd_result);
 	#else
-		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
-			std::string command = "";
-			for (auto arg : args) {
-				command += arg + " ";
-			}
-			std::system(command.c_str());
-			qqbot->send_group_message(info.group_id, "已成功向服务器发送命令！");
-		} else {
-			qqbot->send_group_message(info.group_id, "服务器未运行，无法执行命令！");
-		}
+		qqbot->send_group_message(info.group_id, "该功能暂不支持Linux系统！");
 	#endif
 }
 
@@ -705,51 +603,13 @@ void stopServer(const command_addition_info& info, const std::vector<std::string
 		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
 		return ;
 	}
-	#ifdef _WIN32
-		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-			const char* command = "stop\n";
-			DWORD written;
-			if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-				qqbot->send_group_message(info.group_id, "向服务器发送stop命令失败,原因可能是未使用startserver启动服务器!");
-				WARN("向服务器发送stop命令失败,原因可能是未使用startserver启动服务器!");
-			} else {
-				qqbot->send_group_message(info.group_id, "已成功向服务器发送stop命令！");
-				INFO("已向服务器发送stop命令!");
-			}
-
-			// 等待子进程结束
-			WaitForSingleObject(pi.hProcess, INFINITE);
-
-			// Close process and thread handles.
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-			CloseHandle(g_hChildStd_IN_Wr);
-			CloseHandle(g_hChildStd_IN_Rd);
-			CloseHandle(g_hChildStd_OUT_Wr);
-			CloseHandle(g_hChildStd_OUT_Rd);
-			//检测bedrock_server.exe是否关闭
-			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-				qqbot->send_group_message(info.group_id, "服务器关闭失败，请稍后再试！");
-				WARN("服务器未成功关闭!");
-			} else {
-				qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
-				INFO("服务器已成功关闭!");
-			}
-		} else {
-			qqbot->send_group_message(info.group_id, "服务器未运行，无需关闭！");
-		}
-	#else
-		if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
-			std::system("killall bedrock_server");
-			if (std::system("ps -ef | grep bedrock_server | grep -v grep") != 0) {
-				qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
-			} else {
-				qqbot->send_group_message(info.group_id, "服务器关闭失败！请检查服务器是否正常运行！");
-			}
-		} else {
-			qqbot->send_group_message(info.group_id, "服务器未运行，无需关闭！");
-		}
-	#endif
+	qqbot->send_group_message(info.group_id, "已成功向服务器发送stop命令！");
+	BOOL result = StopServer();
+	if (result) {
+		qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
+	} else {
+		qqbot->send_group_message(info.group_id, "服务器关闭失败，请手动关闭服务器！");
+	}
 }
 
 // 定义指令映射
@@ -822,23 +682,11 @@ bool containsForbiddenWords(const std::string& input) {
 
 //主函数
 void main_qqbot(httplib::Server &svr) {
-	//初始化变量
-	par.parFromFile("./NIAHttpBOT.cfg");
-	//获取配置文件中的UseQQBot
-	UseQQBot = par.getBool("UseQQBot");
 	if (!UseQQBot) {
 		WARN("未启用QQ机器人相关功能！");
 		return;
 	};
 	INFO("已启用QQ机器人相关功能！");
-
-	//获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,ClientPort
-    Locate = par.getString("Locate");
-	ServerLocate = par.getString("ServerLocate");
-    OwnerQQ = par.getString("OwnerQQ");
-    QQGroup = par.getString("QQGroup");
-    IPAddress = par.getString("IPAddress");
-    ClientPort = par.getInt("ClientPort");
 
     //初始化qqbot
     qqbot = new QQBot(IPAddress, ClientPort);
