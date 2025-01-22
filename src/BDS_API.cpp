@@ -1,5 +1,6 @@
 #include "BDS_API.h"
 
+#ifdef WIN32
 STARTUPINFO si;
 PROCESS_INFORMATION pi;
 SECURITY_ATTRIBUTES sa;
@@ -12,6 +13,7 @@ std::queue<std::string> g_McOutputQueue;
 std::mutex g_McOutputMutex;
 std::condition_variable g_McOutputCV;
 bool g_McOutputReady = false;
+#endif
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     switch (dwCtrlType) {
@@ -141,7 +143,7 @@ BOOL StartServer() {
         } else {
             INFO("服务器已启动成功...");
             std::thread outThread([](){
-                char buffer[256];
+                char buffer[1024];
                 DWORD bytesRead = 0;
                 std::string a1, a2;
                 a2.clear();
@@ -264,10 +266,8 @@ std::string runCommand(const std::string& input_command) {
         StopServer();
         //检查bedrock_server.exe是否关闭
         if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-            WARN("服务器未成功关闭...");
             return "服务器未成功关闭...";
         } else {
-            INFO("服务器已成功关闭...");
             return "服务器已成功关闭...";
         }
     }
@@ -275,10 +275,8 @@ std::string runCommand(const std::string& input_command) {
         StartServer();
         //检查bedrock_server.exe是否启动
         if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-            INFO("服务器已成功启动...");
             return "服务器已成功启动...";
         } else {
-            WARN("服务器启动失败...");
             return "服务器启动失败...";
         }
     }
@@ -298,16 +296,7 @@ std::string runCommand(const std::string& input_command) {
             while (!g_McOutputQueue.empty()) {
                 std::string line = g_McOutputQueue.front();
                 g_McOutputQueue.pop();
-                //删除line中的换行符
-                line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
-                //删除line中的\r
-                line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-                //删除line中的[]所包含的内容
-                line = std::regex_replace(line, std::regex("\\[.*?\\]"), "");
-                //删除包括[]在内的所有字符
-                line.erase(std::remove(line.begin(), line.end(), '['), line.end());
-                line.erase(std::remove(line.begin(), line.end(), ']'), line.end());
-                //删除line开头的空格
+                line = std::regex_replace(line, std::regex(R"(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:\d{3} (INFO|ERROR|WARN)\] )"), "");
                 line.erase(0, line.find_first_not_of(" "));
                 g_McOutputReady = false;
                 g_McOutputQueue = std::queue<std::string>();

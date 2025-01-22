@@ -4,8 +4,15 @@ QQBot::QQBot(const std::string& IPAddress, int ClientPort)
     : cli(IPAddress + ":" + std::to_string(ClientPort)) {}
 
 
-int32_t QQBot::send_private_message(const std::string & user_id, const std::string & message, bool auto_escape) {
+int32_t QQBot::send_private_message(const std::string & user_id, const std::string & input_message, bool auto_escape) {
     std::string auto_escape_str = auto_escape ? "true" : "false";
+    std::string message = input_message;
+    std::string::size_type pos = 0;
+    std::string::size_type new_pos = 0;
+    while ((new_pos = message.find("\\", pos)) != std::string::npos) {
+        message.replace(new_pos, 1, "\\\\");
+        pos = new_pos + 2;
+    }
     auto res = cli.Post("/send_private_msg", "{\"user_id\":\"" + user_id + "\",\"message\":\"" + message + "\",\"auto_escape\":\"" + auto_escape_str +"\"}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
@@ -26,8 +33,19 @@ int32_t QQBot::send_private_message(const std::string & user_id, const std::stri
 }
 
 
-int32_t QQBot::send_group_message(const std::string & group_id, const std::string & message, bool auto_escape) {
+int32_t QQBot::send_group_message(const std::string & group_id, const std::string & input_message, bool auto_escape) {
     std::string auto_escape_str = auto_escape ? "true" : "false";
+    std::string message = input_message;
+    size_t pos = 0;
+    while ((pos = message.find("\n", pos)) != std::string::npos) {
+        message.replace(pos, 1, "\\n");
+        pos += 2;
+    }
+    pos = 0;
+    while ((pos = message.find("\r", pos)) != std::string::npos) {
+        message.replace(pos, 1, "\\r");
+        pos += 2;
+    }
     auto res = cli.Post("/send_group_msg", "{\"group_id\":\"" + group_id + "\",\"message\":\"" + message + "\",\"auto_escape\":\"" + auto_escape_str +"\"}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;

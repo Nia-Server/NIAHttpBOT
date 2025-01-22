@@ -488,6 +488,15 @@ signed int main(signed int argc, char** argv) {
             if (tokens.empty()) {
                 continue;
             }
+			if (tokens[0][0] == '/') {
+				tokens[0] = tokens[0].substr(1);
+				std::string command = tokens[0];
+				for (int i = 1; i < tokens.size(); i++) {
+					command += " " + tokens[i];
+				}
+				runCommand(command);
+				continue;
+			}
             auto it = commandMap.find(tokens[0]);
             if (it != commandMap.end()) {
                 it->second(tokens); // 调用对应的处理函数

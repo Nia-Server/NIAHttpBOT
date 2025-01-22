@@ -43,25 +43,25 @@ using CommandHandler = std::function<void(const command_addition_info&, const st
 
 //展示帮助菜单
 void showHelpMenu(const command_addition_info& info, const std::vector<std::string>& args) {
-    std::string helpMenu = "Nia-ServerBot菜单:\\n";
-    helpMenu += "使用方法: 在消息中以#开头，后跟指令和参数\\n";
-    helpMenu += "\\n";
-    helpMenu += "==一般指令==\\n";
-    helpMenu += "#帮助: 显示帮助菜单\\n";
-    helpMenu += "#赞我: 给自己点10个赞\\n";
-    helpMenu += "#绑定 <XboxID>: 绑定XboxID\\n";
-    helpMenu += "例：#绑定 NIANIANKNIA\\n";
-    helpMenu += "#查：查询自己账号的相关信息\\n";
-    helpMenu += "#查 @要查询的人 : 查询别人账号的相关信息\\n";
-    helpMenu += "\\n";
-    helpMenu += "==管理指令==\\n";
-    helpMenu += "#禁言 @要禁言的人 <时间>: 禁言指定群成员\\n";
-    helpMenu += "例：#禁言 @NIANIANKNIA 1h\\n";
-    helpMenu += "#解禁 @要解禁的人: 解禁指定群成员\\n";
-    helpMenu += "#改绑 @要改绑的人 <XboxID>: 改绑XboxID\\n";
-    helpMenu += "#封禁 @要封禁的人 <时间>: 封禁指定群成员游戏账号\\n";
-    helpMenu += "例：#封禁 @NIANIANKNIA 1d\\n";
-    helpMenu += "#解封 @要解封的人: 解封指定群成员账号\\n";
+    std::string helpMenu = "Nia-ServerBot菜单:\n";
+    helpMenu += "使用方法: 在消息中以#开头，后跟指令和参数\n";
+    helpMenu += "\n";
+    helpMenu += "==一般指令==\n";
+    helpMenu += "#帮助: 显示帮助菜单\n";
+    helpMenu += "#赞我: 给自己点10个赞\n";
+    helpMenu += "#绑定 <XboxID>: 绑定XboxID\n";
+    helpMenu += "例：#绑定 NIANIANKNIA\n";
+    helpMenu += "#查：查询自己账号的相关信息\n";
+    helpMenu += "#查 @要查询的人 : 查询别人账号的相关信息\n";
+    helpMenu += "\n";
+    helpMenu += "==管理指令==\n";
+    helpMenu += "#禁言 @要禁言的人 <时间>: 禁言指定群成员\n";
+    helpMenu += "例：#禁言 @NIANIANKNIA 1h\n";
+    helpMenu += "#解禁 @要解禁的人: 解禁指定群成员\n";
+    helpMenu += "#改绑 @要改绑的人 <XboxID>: 改绑XboxID\n";
+    helpMenu += "#封禁 @要封禁的人 <时间>: 封禁指定群成员游戏账号\n";
+    helpMenu += "例：#封禁 @NIANIANKNIA 1d\n";
+    helpMenu += "#解封 @要解封的人: 解封指定群成员账号\n";
     helpMenu += "#改权限 @要改权限的人 <权限>: 改变指定群成员的权限";
     qqbot->send_group_message(info.group_id, helpMenu);
 }
@@ -445,7 +445,7 @@ void queryPlayerInfo(const command_addition_info& info, const std::vector<std::s
 			std::string role = players_data[info.sender_qq.c_str()]["role"].GetString();
 			//获取金币数量
 			std::string money = players_data[info.sender_qq.c_str()]["money"].GetString();
-			qqbot->send_group_message(info.group_id, "玩家信息查询成功！\\nXboxid为：" + xboxid + "\\n账号状态为：" + status + "\\n账号封禁解除时间为：" + ban_time + "\\n账号权限为：" + role + "\\n下线后金币收益为：" + money);
+			qqbot->send_group_message(info.group_id, "玩家信息查询成功！\nXboxid为：" + xboxid + "\n账号状态为：" + status + "\n账号封禁解除时间为：" + ban_time + "\n账号权限为：" + role + "\n下线后金币收益为：" + money);
 			return ;
 		} else {
 			qqbot->send_group_message(info.group_id, "未在玩家数据库中找到您的QQ号！");
@@ -475,7 +475,7 @@ void queryPlayerInfo(const command_addition_info& info, const std::vector<std::s
 			std::string role = players_data[info.target_qq.c_str()]["role"].GetString();
 			//获取金币数量
 			std::string money = players_data[info.target_qq.c_str()]["money"].GetString();
-			qqbot->send_group_message(info.group_id, "玩家信息查询成功！\\nXboxid为：" + xboxid + "\\n账号状态为：" + status + "\\n账号封禁解除时间为：" + ban_time + "\\n账号权限为：" + role + "\\n下线后金币收益为：" + money);
+			qqbot->send_group_message(info.group_id, "玩家信息查询成功！\nXboxid为：" + xboxid + "\n账号状态为：" + status + "\n账号封禁解除时间为：" + ban_time + "\n账号权限为：" + role + "\n下线后金币收益为：" + money);
 			return ;
 		} else {
 			qqbot->send_group_message(info.group_id, "未在玩家数据库中找到 [CQ:at,qq=" + info.target_qq + "] 的信息！");
@@ -957,6 +957,14 @@ void main_qqbot(httplib::Server &svr) {
 				} else {
 					qqbot->send_group_message(group_id, "未知指令，请发送#帮助 获取指令帮助！");
 				}
+			}
+
+			if (!tokens.empty() && tokens[0][0] == '/') {
+				command_addition_info info = {group_id, sender_qq, sender_role, target_qq};
+				//删去命令中的/
+				tokens[0] = tokens[0].substr(1);
+				//执行命令
+				executeServerCommand(info, tokens);
 			}
 
 			//处理回复消息,如果是管理员回复内容为撤回，则撤回原消息以及回复消息
