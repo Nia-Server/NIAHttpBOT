@@ -112,7 +112,7 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
 
 
 
-BOOL StartServer() {
+bool StartServer() {
     #ifdef WIN32
     INFO("正在启动BDS服务器...");
     if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
@@ -219,7 +219,7 @@ BOOL StartServer() {
 
 }
 
-BOOL StopServer() {
+bool StopServer() {
     #ifdef WIN32
     	const char* command = "stop\n";
     	DWORD written;

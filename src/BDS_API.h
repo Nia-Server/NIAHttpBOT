@@ -11,13 +11,12 @@ extern std::string ServerLocate;
 
 #ifdef WIN32
 #include <windows.h>
-#endif
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType);
+#endif
 
-BOOL StartServer();
-BOOL StopServer();
-
+bool StartServer();
+bool StopServer();
 std::string runCommand(const std::string& command);
 
 #endif
