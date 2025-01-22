@@ -117,7 +117,7 @@ bool StartServer() {
     INFO("正在启动BDS服务器...");
     if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
         INFO("检测到服务器正在运行，无需重新启动！");
-        return TRUE;
+        return true;
     } else {
         ZeroMemory(&si, sizeof(si));
         si.cb = sizeof(si);
@@ -139,7 +139,7 @@ bool StartServer() {
 
         if (!CreateProcess(NULL, const_cast<char*>(ServerLocate.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
             WARN("服务器启动失败：" + std::to_string(GetLastError()));
-            return FALSE;
+            return false;
         } else {
             INFO("服务器已启动成功...");
             std::thread outThread([](){
@@ -202,20 +202,14 @@ bool StartServer() {
                 }
             });
             outThread.detach();
-            return TRUE;
+            return false;
         }
     }
     #else
-    std::system(ServerLocate.c_str());
-    if (std::system("ps -ef | grep bedrock_server | grep -v grep") == 0) {
-        INFO("服务器已成功启动...");
-        return TRUE;
-    } else {
-        WARN("服务器启动失败...");
-        return FALSE;
-    }
+    INFO("暂时不支持Linux系统下的启动服务器功能");
+    return false;
     #endif
-    return FALSE;
+    return false;
 
 }
 
@@ -225,7 +219,7 @@ bool StopServer() {
     	DWORD written;
     	if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
     		WARN("向服务器发送stop命令失败,原因可能是未使用startserver启动服务器");
-            return FALSE;
+            return false;
     	} else {
     		INFO("已向服务器发送stop命令");
     	}
@@ -242,16 +236,16 @@ bool StopServer() {
     	//检测bedrock_server.exe是否关闭
     	if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
     		WARN("服务器未成功关闭...");
-            return FALSE;
+            return false;
     	} else {
     		INFO("服务器已成功关闭...");
-            return TRUE;
+            return true;
     	}
     #else
     	INFO("暂时不支持Linux系统下的关闭服务器功能");
-        return FALSE;
+        return false;
     #endif
-    return FALSE;
+    return false;
 }
 
 
