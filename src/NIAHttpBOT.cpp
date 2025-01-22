@@ -499,7 +499,7 @@ signed int main(signed int argc, char** argv) {
 										+ a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
 										+ a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
 										+ "] \x1b[0m" + "\x1b[41;1m[FAIL]\x1b[0m "
-										+ a.substr(31);
+										+ a.substr(32);
 									
 									//if(a[32]=='S' && a[a.size()-1]==a[a.size()-2]) res.pop_back();
 
