@@ -13,7 +13,6 @@ std::queue<std::string> g_McOutputQueue;
 std::mutex g_McOutputMutex;
 std::condition_variable g_McOutputCV;
 bool g_McOutputReady = false;
-#endif
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     switch (dwCtrlType) {
@@ -109,6 +108,7 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     }
     return FALSE;
 }
+#endif
 
 
 
