@@ -9,6 +9,8 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
+      - name: Set timezone to Asia/Shanghai
+        run: tzutil /s "China Standard Time"
       - name: Checkout the repository
         uses: actions/checkout@v4
       - name: Install CMake and Ninja
@@ -27,6 +29,9 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
+      - name: Set timezone to Asia/Shanghai
+        run: |
+          sudo timedatectl set-timezone Asia/Shanghai
       - name: Checkout the repository
         uses: actions/checkout@v4
       - name: Install CMake and Ninja

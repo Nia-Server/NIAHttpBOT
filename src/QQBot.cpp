@@ -688,8 +688,8 @@ void main_qqbot(httplib::Server &svr) {
 		//加载违禁词列表
 		loadForbiddenWords("ForbiddenWords.txt");
 	} else {
-		FAIL("QQ机器人连接失败，请检查QQ机器人是否已启动&&配置是否正确！");
-		FAIL("如需更多帮助请前往 https://docs.mcnia.com/dev/NIAHttpBOT.html 查看！");
+		WARN("QQ机器人连接失败，请检查QQ机器人是否已启动&&配置是否正确！");
+		WARN("如需更多帮助请前往 https://docs.mcnia.com/dev/NIAHttpBOT.html 查看！");
 		return;
 	}
 

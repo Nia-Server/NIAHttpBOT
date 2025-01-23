@@ -256,7 +256,7 @@ signed int main(signed int argc, char** argv) {
 	)" <<"\x1b[0m"<< std::endl;
 
 	CFGPAR::parser par;
-	INFO("当前版本：" + std::string(VERSION) + " 构建时间: " + std::string(__DATE__) + " " + std::string(__TIME__));
+	INFO("当前版本：" + std::string(VERSION) + " 构建时间: " + std::string(__DATE__) + " " + std::string(__TIME__) + " (UTC +8)");
 	//解析版本号，如果版本号后面有-pre-则输出警告这是一个预览版本
 	if (std::string(VERSION).find("-pre-") != std::string::npos) {
 		WARN("这是一个预发布版本，仅供开发者预览，不要在正式生产环境中使用");
