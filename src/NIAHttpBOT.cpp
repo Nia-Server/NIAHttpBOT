@@ -82,6 +82,7 @@ std::string QQGroup = "123456789";
 
 #ifdef WIN32
 
+
 #define popen _popen
 #define pclose _pclose
 #define WEXITSTATUS
@@ -155,6 +156,16 @@ void sslThread(){
 
 }
 
+void EnableVirtualTerminalProcessing() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) return;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode)) return;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(hOut, dwMode);
+}
 #else
 void sslThread(){
 }
@@ -194,8 +205,9 @@ signed int main(signed int argc, char** argv) {
 	//g1.setResultSize(20,20,20);
 
 	//g1.printGrid();
-
-
+	#ifdef WIN32
+    EnableVirtualTerminalProcessing();
+    #endif
 
 	std::cout << "\033]0;NIAHttpBOT " << VERSION <<"\007";
 
