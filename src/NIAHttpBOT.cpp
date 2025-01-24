@@ -441,6 +441,39 @@ signed int main(signed int argc, char** argv) {
 		runCommand(command);
 	};
 
+	commandMap["whitelist"] = [](const std::vector<std::string>& args) {
+		if (args.size() < 2) {
+			WARN("whitelist指令需要一个参数: <add|remove>");
+			return;
+		}
+		//判断是否为add或remove
+		if (args[1] == "add") {
+			if (args.size() < 3) {
+				WARN("add指令需要一个参数: <player_name>");
+				return;
+			}
+			std::string player_name = args[2];
+			if (AddPlayerToWhitelist(player_name)) {
+				INFO("已成功添加玩家 " + player_name + " 到白名单");
+			} else {
+				WARN("添加玩家 " + player_name + " 到白名单失败");
+			}
+		} else if (args[1] == "remove") {
+			if (args.size() < 3) {
+				WARN("remove指令需要一个参数: <player_name>");
+				return;
+			}
+			std::string player_name = args[2];
+			if (RemovePlayerFromWhitelist(player_name)) {
+				INFO("已成功从白名单中移除玩家 " + player_name);
+			} else {
+				WARN("从白名单中移除玩家 " + player_name + " 失败");
+			}
+		} else {
+			WARN("未知指令: " + args[1] + "，输入 help 查看帮助");
+		}
+	};
+
 
 	//关闭程序,向bedrock_server.exe中发送stop
 	commandMap["stopserver"] = [](const std::vector<std::string>&) {

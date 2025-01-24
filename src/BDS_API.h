@@ -18,5 +18,7 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType);
 bool StartServer();
 bool StopServer();
 std::string runCommand(const std::string& command);
+bool AddPlayerToWhitelist(const std::string& player_name);
+bool RemovePlayerFromWhitelist(const std::string& player_name);
 
 #endif

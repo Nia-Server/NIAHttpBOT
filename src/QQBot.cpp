@@ -249,7 +249,13 @@ void bindXboxID(const command_addition_info& info, const std::vector<std::string
 		players_data.Accept(writer);
 		players_data_file.close();
 		//向群聊发送类似“绑定Xboxid成功,绑定的Xboxid为：xxx，如需改绑请联系在线管理员！”
-		qqbot->send_group_message(info.group_id, "绑定Xboxid成功,绑定的Xboxid为：" + XboxID + "，如需改绑请联系在线管理员！");
+		qqbot->send_group_message(info.group_id, "绑定Xboxid成功,绑定的Xboxid为：" + XboxID + "，如需改绑请联系在线管理员");
+		//将玩家XboxID添加到白名单
+		if (AddPlayerToWhitelist(XboxID)) {
+			qqbot->send_group_message(info.group_id, "已将您的XboxID添加到白名单");
+		} else {
+			qqbot->send_group_message(info.group_id, "将您的XboxID添加到白名单失败，请联系管理员手动添加");
+		}
 		return ;
 	}
 }
