@@ -49,7 +49,7 @@ add_definitions(-D__PROJECT__="${CMAKE_CURRENT_SOURCE_DIR}")
 add_executable(${PROJECT} ${SOURCE})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-	target_link_libraries(${PROJECT} PRIVATE 
+	target_link_libraries(${PROJECT} PRIVATE
 		"${CMAKE_SOURCE_DIR}/lib/libcrypto.lib"
 		"${CMAKE_SOURCE_DIR}/lib/libssl.lib")
 

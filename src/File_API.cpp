@@ -12,7 +12,7 @@ void init_file_API(httplib::Server &svr) {
 		file.close();
 	});
 
-		//检测指定文件夹是否存在
+	//检测指定文件夹是否存在
 	svr.Post("/CheckDir",  [](const httplib::Request& req, httplib::Response& res) {
 		res.status = 200;
 		std::filesystem::path p{req.body};
@@ -25,7 +25,6 @@ void init_file_API(httplib::Server &svr) {
 
 	//创建新的文件
 	svr.Post("/CreateNewFile", [](const httplib::Request& req, httplib::Response& res) {
-		INFO("[HttpRequest] 接收到创建新文件的请求，请求创建的文件名称为：" << req.body << "\0");
 		//解析字符串并创建一个json对象
 		rapidjson::Document NewFileData;
 		NewFileData.Parse(req.body.c_str());
@@ -50,6 +49,7 @@ void init_file_API(httplib::Server &svr) {
 		//读取键为fileName的内容
 		//读取文件名称
 		fileName = NewFileData["fileName"].GetString();
+		INFO("[HttpRequest] 接收到创建新文件的请求，请求创建的文件名称为：" << fileName << "\0");
 		//读取文件内容
 		std::string fileContent = NewFileData["content"].GetString();
 		// 检测${fileName}文件是否存在，如果不存在，就创建一个新的文件，并写入内容

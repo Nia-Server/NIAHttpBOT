@@ -961,6 +961,7 @@ void main_qqbot(httplib::Server &svr) {
 				tokens[0] = tokens[0].substr(1);
 				//执行命令
 				executeServerCommand(info, tokens);
+				return ;
 			}
 
 			//处理回复消息,如果是管理员回复内容为撤回，则撤回原消息以及回复消息
