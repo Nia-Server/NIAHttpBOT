@@ -198,10 +198,11 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
 
 
 
+
 signed int main(signed int argc, char** argv) {
 
-static CFGPAR::parser par;
 
+static CFGPAR::parser par;
 	// G g1(10, 10, 10);
 	// convertOBJToGrid("bunny.obj", g1);
 	// g1.autoAdjust();

@@ -613,10 +613,6 @@ void executeSystemCommand(const command_addition_info& info, const std::vector<s
 #endif
 	std::unique_ptr<FILE, decltype(&std::fclose)> pipe(popen(cmd.c_str(), "r"), &std::fclose);
 	
-
-
-
-	cmd.pop_back();
     if (!pipe) {
        qqbot->send_group_message(info.group_id, "命令执行失败" + cmd);
 		return;
