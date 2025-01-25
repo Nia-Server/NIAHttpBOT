@@ -88,7 +88,7 @@ std::string QQGroup = "123456789";
 #define WEXITSTATUS
 
 
-static CFGPAR::parser par;
+CFGPAR::parser par;
 
 
 void sslThread(){
