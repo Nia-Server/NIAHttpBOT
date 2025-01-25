@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <string>
 #include <algorithm>
+#include <cstdio>
 #include <httplib.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>

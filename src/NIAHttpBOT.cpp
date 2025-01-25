@@ -87,6 +87,10 @@ std::string QQGroup = "123456789";
 #define pclose _pclose
 #define WEXITSTATUS
 
+
+static CFGPAR::parser par;
+
+
 void sslThread(){
 	//与GitHub的API通信来检查更新
 	httplib::SSLClient cli("api.github.com");
@@ -267,7 +271,7 @@ signed int main(signed int argc, char** argv) {
 ./o--000'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'./o--000'"`-0-0-'"`-0-0-'"`-0-0-'
 	)" <<"\x1b[0m"<< std::endl;
 
-	CFGPAR::parser par;
+
 	INFO("当前版本：" + std::string(VERSION) + " 构建时间: " + std::string(__DATE__) + " " + std::string(__TIME__) + " (UTC +8)");
 	//解析版本号，如果版本号后面有-pre-则输出警告这是一个预览版本
 	if (std::string(VERSION).find("-pre-") != std::string::npos) {
@@ -320,7 +324,7 @@ signed int main(signed int argc, char** argv) {
 	httplib::Server svr;
 
 
-    svr.Post("/GetConfig", [&par](const httplib::Request& req, httplib::Response& res){
+    svr.Post("/GetConfig", [](const httplib::Request& req, httplib::Response& res){
 		rapidjson::Document req_json;
 		req_json.Parse(req.body.c_str()), res.status = 400;
 		if(req_json.HasParseError()||!req_json.HasMember("Name")||!req_json.HasMember("Type")
@@ -393,6 +397,60 @@ signed int main(signed int argc, char** argv) {
 	if (AutoStartServer) {
 		StartServer();
 	}
+
+	if(par.getBool("AutoBackup", false))
+	std::thread([]() {
+        while (true) {
+            std::time_t current_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            std::tm current_tm = *std::localtime(&current_time_t);
+
+            current_tm.tm_hour = par.getInt("BackupHour", 4);
+            current_tm.tm_min = par.getInt("BackupMinute", 0)%60;
+            current_tm.tm_sec = par.getInt("BackupSecond", 0)%60;
+
+            std::time_t target_time_t = std::mktime(&current_tm);
+
+            if (target_time_t <= current_time_t) {
+                current_tm.tm_mday += 1; 
+                target_time_t = std::mktime(&current_tm);
+            }
+
+            double seconds_to_wait = difftime(target_time_t, current_time_t);
+
+            std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(seconds_to_wait)));
+
+			
+			std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+			StopServer();
+
+			std::this_thread::sleep_for(std::chrono::seconds(5));
+
+			std::string From = par.getString("BackupFrom", "./worlds");
+			std::string To = par.getString("BackupTo", "./backup");
+
+			// 获取当前时间作为文件名
+			std::tm *time_info = std::localtime(&now);
+			char buffer[80];
+			std::strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", time_info);
+			std::string backup_filename = std::string(buffer) + ".zip"; // 使用当前时间作为文件名
+
+			// 创建目标路径
+			std::string backup_file_path = To + "/" + backup_filename;
+
+			// 使用系统命令压缩指定目录
+			std::string command = "zip -r \"" + backup_file_path + "\" \"" + From + "\"";
+			std::cout << "Running command: " << command << std::endl;
+
+			// 执行压缩命令
+			int result = std::system(command.c_str());
+			if (result == 0) {
+				std::cout << "Backup successful: " << backup_file_path << std::endl;
+			} else {
+				std::cout << "Backup failed!" << std::endl;
+			}
+        }
+    }).detach(); 
 
 	//监听终端命令输入
 	using CommandHandler = std::function<void(const std::vector<std::string>&)>;

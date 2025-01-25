@@ -1,8 +1,9 @@
 #include "QQBot.h"
+
 //使用https://github.com/botuniverse/onebot-11/
 
 //读取配置文件
-CFGPAR::parser par;
+//CFGPAR::parser par;
 
 //获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,ClientPort
 extern std::string ServerLocate;
@@ -593,6 +594,47 @@ void executeServerCommand(const command_addition_info& info, const std::vector<s
 	#endif
 }
 
+
+
+void executeSystemCommand(const command_addition_info& info, const std::vector<std::string>& args) {
+	//判断执行者是否为管理员
+	if (info.sender_role != "admin" && info.sender_role  != "owner" && info.sender_qq != OwnerQQ) {
+		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
+		return ;
+	}
+	std::string cmd = args[0];
+		for (int i = 1; i < args.size(); i++) {
+			cmd += " " + args[i];
+		}
+
+		
+#if defined(_WIN32) || defined(_WIN64)
+    #define popen _popen 
+#endif
+	std::unique_ptr<FILE, decltype(&std::fclose)> pipe(popen(cmd.c_str(), "r"), &std::fclose);
+	
+
+
+
+	cmd.pop_back();
+    if (!pipe) {
+       qqbot->send_group_message(info.group_id, "命令执行失败" + cmd);
+		return;
+    }
+
+    // 读取命令的输出
+    char buffer[128];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe.get()) != nullptr) {
+        result += buffer;
+    }
+	qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + cmd);
+	//输出命令
+	//输出结果
+	qqbot->send_group_message(info.group_id, result);
+
+}
+
 //关闭BDS服务器
 void stopServer(const command_addition_info& info, const std::vector<std::string>& args) {
 	//判断执行者是否为管理员
@@ -955,12 +997,21 @@ void main_qqbot(httplib::Server &svr) {
 				}
 			}
 
-			if (!tokens.empty() && tokens[0][0] == '/') {
+			else if (!tokens.empty() && tokens[0][0] == '/') {
 				command_addition_info info = {group_id, sender_qq, sender_role, target_qq};
 				//删去命令中的/
 				tokens[0] = tokens[0].substr(1);
 				//执行命令
 				executeServerCommand(info, tokens);
+				return ;
+			}
+
+			else if (!tokens.empty() && tokens[0][0] == '>') {
+				command_addition_info info = {group_id, sender_qq, sender_role, target_qq};
+				//删去命令中的/
+				tokens[0] = tokens[0].substr(1);
+				//执行命令
+				executeSystemCommand(info, tokens);
 				return ;
 			}
 

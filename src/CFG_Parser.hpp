@@ -257,7 +257,8 @@ public:
 
     #define MAKEIS(name) inline bool is##name(const std::string& idx){ if(KVmap.count(idx)==0) return false; return KVmap[idx].typ == name##Type; }
     #define MAKEGET(name,typ) inline typ get##name(const std::string& idx){ if(KVmap.count(idx)==0) return NULL; return getVal<typ>(idx); }
-    #define MAKEISGET(name,typ) MAKEIS(name) MAKEGET(name,typ)
+    #define MAKENB(name,typ) inline typ get##name(const std::string& idx, typ def){ if(KVmap.count(idx)==0) return def; return getVal<typ>(idx); }
+    #define MAKEISGET(name,typ) MAKEIS(name) MAKEGET(name,typ) MAKENB(name,typ)
 
     MAKEISGET(Bool, bool)
     MAKEISGET(Int, int)
