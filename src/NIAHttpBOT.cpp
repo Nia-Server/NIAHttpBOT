@@ -88,7 +88,7 @@ std::string QQGroup = "123456789";
 #define WEXITSTATUS
 
 
-CFGPAR::parser par;
+CFGPAR::parser NIA_par;
 
 
 void sslThread(){
@@ -199,6 +199,8 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
 
 
 signed int main(signed int argc, char** argv) {
+
+#define par NIA_par
 
 	// G g1(10, 10, 10);
 	// convertOBJToGrid("bunny.obj", g1);
@@ -614,5 +616,7 @@ signed int main(signed int argc, char** argv) {
     // 等待输入线程完成
     inputThread.join();
 
+
+#undef par
 	return 0;
 }
