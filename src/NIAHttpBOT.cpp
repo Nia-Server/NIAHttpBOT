@@ -4,7 +4,7 @@ Copyright (C) 2025 Nia-Server
 
 The developer is not responsible for you, and the developer is not obliged to write code for you, and is not liable for any consequences of your use.
 
-In addition, you are required to comply with the terms of the AGPL-3.0 (https://github.com/Nia-Server/NIAHttpBOT/blob/main/LICENSE) open source licence for this project, and the related open source agreements used by all sub-projects of this project.
+In addition, you are required to comply with the terms of the AGPL-3.0 (https://github.com/Nia-Server/NIAHttpBOT/blob/main/LICENSE) open source licence for this project.
 
 If you do not accept these terms, please delete this project immediately.
 
