@@ -7,24 +7,29 @@ QQBot::QQBot(const std::string& IPAddress, int ClientPort)
 int32_t QQBot::send_private_message(const std::string & user_id, const std::string & input_message, bool auto_escape) {
     std::string auto_escape_str = auto_escape ? "true" : "false";
     std::string message = input_message;
-    std::string::size_type pos = 0;
-    std::string::size_type new_pos = 0;
-    while ((new_pos = message.find("\\", pos)) != std::string::npos) {
-        message.replace(pos, 1, "\\\\");
-        pos = pos + 2;
-    }
-    pos=0;
-    while ((pos = message.find("\n", pos)) != std::string::npos) {
-        message.replace(pos, 1, "\\n");
-        pos += 2;
-    }
-    pos = 0;
-    while ((pos = message.find("\r", pos)) != std::string::npos) {
-        message.replace(pos, 1, "\\r");
-        pos += 2;
-    }
-    
-    auto res = cli.Post("/send_private_msg", "{\"user_id\":\"" + user_id + "\",\"message\":\"" + message + "\",\"auto_escape\":\"" + auto_escape_str +"\"}", "application/json");
+    //创建一个对象
+    rapidjson::Document post_data;
+    //设置对象的值
+    post_data.SetObject();
+    //添加键值对
+    rapidjson::Value key_user_id("user_id");
+    rapidjson::Value value_user_id(user_id.c_str(), post_data.GetAllocator());
+    post_data.AddMember(key_user_id, value_user_id, post_data.GetAllocator());
+    rapidjson::Value key_message("message");
+    rapidjson::Value value_message(message.c_str(), post_data.GetAllocator());
+    post_data.AddMember(key_message, value_message, post_data.GetAllocator());
+    rapidjson::Value key_auto_escape("auto_escape");
+    rapidjson::Value value_auto_escape(auto_escape_str.c_str(), post_data.GetAllocator());
+    post_data.AddMember(key_auto_escape, value_auto_escape, post_data.GetAllocator());
+    //创建一个字符串流
+    rapidjson::StringBuffer buffer;
+    //创建一个写入器
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    //将对象写入字符串流
+    post_data.Accept(writer);
+    //将字符串流转化为字符串
+    std::string post_data_str = buffer.GetString();
+    auto res = cli.Post("/send_private_msg", post_data_str, "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -44,27 +49,31 @@ int32_t QQBot::send_private_message(const std::string & user_id, const std::stri
 }
 
 
-int32_t QQBot::send_group_message(const std::string & group_id, const std::string & input_message, bool auto_escape) {
+int32_t QQBot::send_group_message(const std::string & group_id, const std::string & message, bool auto_escape) {
     std::string auto_escape_str = auto_escape ? "true" : "false";
-    std::string message = input_message;
-    size_t pos = 0;
-    while ((pos = message.find("\\", pos)) != std::string::npos) {
-        message.replace(pos, 1, "\\\\");
-        pos = pos + 2;
-    }
-    pos=0;
-    while ((pos = message.find("\n", pos)) != std::string::npos) {
-        message.replace(pos, 1, "\\n");
-        pos += 2;
-    }
-    pos = 0;
-    while ((pos = message.find("\r", pos)) != std::string::npos) {
-        message.replace(pos, 1, "\\r");
-        pos += 2;
-    }
-    
-
-    auto res = cli.Post("/send_group_msg", "{\"group_id\":\"" + group_id + "\",\"message\":\"" + message + "\",\"auto_escape\":\"" + auto_escape_str +"\"}", "application/json");
+     //创建一个对象
+    rapidjson::Document post_data;
+    //设置对象的值
+    post_data.SetObject();
+    //添加键值对
+    rapidjson::Value key_group_id("group_id");
+    rapidjson::Value value_group_id(group_id.c_str(), post_data.GetAllocator());
+    post_data.AddMember(key_group_id, value_group_id, post_data.GetAllocator());
+    rapidjson::Value key_message("message");
+    rapidjson::Value value_message(message.c_str(), post_data.GetAllocator());
+    post_data.AddMember(key_message, value_message, post_data.GetAllocator());
+    rapidjson::Value key_auto_escape("auto_escape");
+    rapidjson::Value value_auto_escape(auto_escape_str.c_str(), post_data.GetAllocator());
+    post_data.AddMember(key_auto_escape, value_auto_escape, post_data.GetAllocator());
+    //创建一个字符串流
+    rapidjson::StringBuffer buffer;
+    //创建一个写入器
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    //将对象写入字符串流
+    post_data.Accept(writer);
+    //将字符串流转化为字符串
+    std::string post_data_str = buffer.GetString();
+    auto res = cli.Post("/send_group_msg", post_data_str, "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
