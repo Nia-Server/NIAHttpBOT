@@ -566,6 +566,35 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 
 //执行BDS服务器命令
 void executeServerCommand(const command_addition_info& info, const std::vector<std::string>& args) {
+	//先定义一个命令白名单
+	std::vector<std::string> command_whitelist = {"list"};
+	//先判断指令是否为白名单指令，如果是则直接执行
+	if (std::find(command_whitelist.begin(), command_whitelist.end(), args[0]) != command_whitelist.end()) {
+		#ifdef _WIN32
+		if (args.size() < 1) {
+			qqbot->send_group_message(info.group_id, "执行命令指令格式错误，执行命令格式为:#cmd <命令> 或/<命令>");
+			return;
+		}
+		//把args中的参数拼接成一个完整的命令
+		std::string command = args[0];
+		for (int i = 1; i < args.size(); i++) {
+			command += " " + args[i];
+		}
+		//删去命令中的换行符并赋值给std_command
+		std::string std_command = command;
+		std_command.erase(std::remove(std_command.begin(), std_command.end(), '\n'), std_command.end());
+		qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + std_command);
+		//输出命令
+		std::string cmd_result = runCommand(command);
+		//输出结果
+		qqbot->send_group_message(info.group_id, cmd_result);
+		return ;
+		#else
+		qqbot->send_group_message(info.group_id, "该功能暂不支持Linux系统！");
+		return ;
+		#endif
+	}
+
 	//判断执行者是否为管理员
 	if (info.sender_role != "admin" && info.sender_role  != "owner" && info.sender_qq != OwnerQQ) {
 		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
@@ -573,7 +602,7 @@ void executeServerCommand(const command_addition_info& info, const std::vector<s
 	}
 	#ifdef _WIN32
 		if (args.size() < 1) {
-			qqbot->send_group_message(info.group_id, "执行命令指令格式错误，执行命令格式为:#CMD <命令>");
+			qqbot->send_group_message(info.group_id, "执行命令指令格式错误，执行命令格式为:#cmd <命令> 或/<命令>");
 			return;
 		}
 		//把args中的参数拼接成一个完整的命令
