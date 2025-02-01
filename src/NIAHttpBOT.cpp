@@ -65,7 +65,7 @@ If you have any problems with this project, please contact the authors.
 #include "OBJ_Loader.h"
 
 //定义版本号
-#define VERSION "v1.0.0"
+#define VERSION "v1.0.0-pre-4"
 
 
 std::string LanguageFile = "";
@@ -202,6 +202,8 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
 signed int main(signed int argc, char** argv) {
 
 
+
+
 static CFGPAR::parser par;
 	// G g1(10, 10, 10);
 	// convertOBJToGrid("bunny.obj", g1);
@@ -325,7 +327,6 @@ static CFGPAR::parser par;
 
 	//初始化服务器
 	httplib::Server svr;
-
 
     svr.Post("/GetConfig", [](const httplib::Request& req, httplib::Response& res){
 		rapidjson::Document req_json;

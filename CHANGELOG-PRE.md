@@ -1,4 +1,4 @@
-# v1.0.0-pre-3 更新日志
+# v1.0.0-pre-4 更新日志
 
 [![NIAHttpBOT-VERSION](https://img.shields.io/badge/NIAHttpBOT-v1.0.0-orange?style=for-the-badge&logo=appveyor)](https://github.com/Nia-Server/NIAHttpBOT/) [![NapCatQQ-VERSION](https://img.shields.io/badge/NapCatQQ-v4.3.3-green?style=for-the-badge&logo=appveyor)](https://github.com/NapNeko/NapCatQQ/releases/tag/v4.3.3)
 
@@ -10,24 +10,18 @@
 
 ## 优化
 
-1. 统一BDS服务器与NIAHttpBOT日志输出样式
-2. 分离控制BDS服务器相关代码
-3. `ctrl c`关闭NIAHttpBOT时，会自动关闭BDS服务器(当前版本仅windows支持)
-4. BDS服务器关闭与开启逻辑
-5. `reload`指令重启逻辑
-6. 配置文件读取逻辑
-
+日志输出效果
 
 ## 新增
 
-1. 配置项目`AutoStartServer`，用于控制NIAHttpBOT是否自动启动BDS服务器(当前版本仅windows支持)
-2. QQBOT指令`/`，输入带有`/`前缀的指令，会作为BDS服务器指令执行(当前版本仅windows支持)
-3. NIAHttpBOT指令`/`，输入带有`/`前缀的指令，会作为BDS服务器执行(当前版本仅windows支持)
+1. BDS服务器玩家白名单增添与删除
+2. 自动备份BDS服务器存档功能支持
+3. 普通成员可执行list指令
 
 ## 修复
 
-1. reload指令没有关闭bds服务器的问题
-2. 指令执行后结果过长时输出不完整的问题
+1. 某些系统下日志无法正常彩色输出的BUG
+2. 某些指令执行后无法正常返回执行结果的BUG
 
 
 **配置说明：您可以前往[NIA服务器官方文档站](https://docs.mcnia.com/dev/Http-Bot.html)查看具体部署过程！**
