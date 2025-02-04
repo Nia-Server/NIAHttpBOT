@@ -21,6 +21,7 @@
 - 群聊执行BDS服务器开服&&关服
 - 群聊执行BDS服务器内指令
 - 群聊&&服务器内玩家消息互通（仅在搭配NiaServer-Core v1.5.0及以上版本时可用）
+- BDS服务器玩家白名单增添与删除
 2. 指令系统
 - **reload** 指令，用于重载NIAHttpBOT
 - **stop** 指令，用于关闭NIAHttpBOT
@@ -33,7 +34,8 @@
 5. 读取&&解析OBJ文件功能
 6. 在启动NIAHttpBOT时，可选自动启动BDS服务器(当前版本仅windows支持)
 7. 在使用NIAHttpBOT启动BDS服务器输出消息可内嵌在NIAHttpBOT输出日志中
-8. 基于以上功能，配置文件新增`ServerLocate`、`AutoStartServer`、`UseQQBot`、`Locate`、`OwnerQQ`、`QQGroup`配置项
+8. 自动备份BDS服务器存档功能支持
+9. 基于以上功能，配置文件新增`ServerLocate`、`AutoStartServer`、`UseQQBot`、`Locate`、`OwnerQQ`、`QQGroup`配置项
 
 ## 修复
 
