@@ -65,11 +65,12 @@ If you have any problems with this project, please contact the authors.
 #include "OBJ_Loader.h"
 
 //定义版本号
-#define VERSION "v1.0.0-pre-4"
+#define VERSION "v1.0.0"
 
 
 std::string LanguageFile = "";
 std::string ServerLocate = "D:\\NiaServer-Core\\bedrock_server.exe";
+bool AutoBackup = false;
 bool AutoStartServer = false;
 std::string IPAddress = "127.0.0.1";
 int ServerPort = 10086;
@@ -286,12 +287,13 @@ static CFGPAR::parser par;
 	//首先检查有没有配置文件
 	if (!par.parFromFile("./NIAHttpBOT.cfg")) {
 		std::ofstream outcfgFile("NIAHttpBOT.cfg");
-		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = false\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"\n\n\n";
+		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoBackup = false\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = false\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"\n\n\n";
 		outcfgFile.close();
 		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
 	} else {
 		IPAddress = par.getString("IPAddress");
 		ServerLocate = par.getString("ServerLocate");
+		AutoBackup = par.getBool("AutoBackup");
 		AutoStartServer = par.getBool("AutoStartServer");
 		ServerPort = par.getInt("ServerPort");
 		UseCmd = par.getBool("UseCmd");
