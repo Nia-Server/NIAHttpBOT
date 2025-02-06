@@ -474,7 +474,7 @@ static CFGPAR::parser par;
     };
 
 	std::string programName = argv[0];
-	commandMap["reload"] = [programName](const std::vector<std::string>&) {
+	commandMap["restart"] = [programName](const std::vector<std::string>&) {
         INFO("1s后重启程序..." );
         std::this_thread::sleep_for(std::chrono::seconds(1));
         #ifdef _WIN32
