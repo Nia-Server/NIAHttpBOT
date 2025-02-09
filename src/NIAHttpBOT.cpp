@@ -87,7 +87,7 @@ bool UseQQBot = false;
 std::string QQIPAddress = "127.0.0.1";
 int QQClientPort = 10023;
 int QQServerPort = 10086;
-std::string Locate = "/qq_event";
+std::string Locate = "/qqEvent";
 std::string OwnerQQ = "123456789";
 std::string QQGroup = "123456789";
 
@@ -601,9 +601,13 @@ static CFGPAR::parser par;
             }
         }
     });
+	std::thread([&svr]() {
+		svr.listen(IPAddress, ServerPort);
+	}).detach();
 
-	svr.listen(IPAddress, ServerPort);
-	qqsvr.listen(QQIPAddress, QQServerPort);
+	std::thread([&qqsvr]() {
+		qqsvr.listen(QQIPAddress, QQServerPort);
+	}).detach();
 
     // 等待输入线程完成
     inputThread.join();
