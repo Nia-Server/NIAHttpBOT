@@ -3,6 +3,7 @@
 
 #include <queue>
 #include <regex>
+#include <thread>
 
 
 #include "Logger.hpp"
