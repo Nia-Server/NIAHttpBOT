@@ -65,19 +65,29 @@ If you have any problems with this project, please contact the authors.
 #include "OBJ_Loader.h"
 
 //定义版本号
-#define VERSION "v1.0.0"
+#define VERSION "v1.0.1"
 
 
 std::string LanguageFile = "";
-std::string ServerLocate = "D:\\NiaServer-Core\\bedrock_server.exe";
-bool AutoBackup = false;
-bool AutoStartServer = false;
 std::string IPAddress = "127.0.0.1";
-int ServerPort = 10086;
+int ServerPort = 2333;
+int WebUIPort = 5000;
+
+std::string ServerLocate = "D:\\NiaServer-Core\\bedrock_server.exe";
+bool AutoStartServer = false;
+bool AutoBackup = false;
+int BackupHour = 4;
+int BackupMinute = 0;
+int BackupSecond = 0;
+std::string BackupFrom = "D:\\NiaServer-Core\\worlds\\250117";
+std::string BackupTo = "./backup";
+
 bool UseCmd = false;
 bool UseQQBot = false;
-int ClientPort = 10023;
-std::string Locate = "/qqEvent";
+std::string QQIPAddress = "127.0.0.1";
+int QQClientPort = 10023;
+int QQServerPort = 10086;
+std::string Locate = "/qq_event";
 std::string OwnerQQ = "123456789";
 std::string QQGroup = "123456789";
 
@@ -287,18 +297,49 @@ static CFGPAR::parser par;
 	//首先检查有没有配置文件
 	if (!par.parFromFile("./NIAHttpBOT.cfg")) {
 		std::ofstream outcfgFile("NIAHttpBOT.cfg");
-		outcfgFile << "# 基础配置:\n\nLanguageFile = \"\"\nServerLocate = \"D:\\\\NiaServer-Core\\\\bedrock_server.exe\"\nAutoBackup = false\nAutoStartServer = false\nIPAddress = \"127.0.0.1\"\nServerPort = 10086\n\n# 功能配置:\n\nUseCmd = false\n\n# QQ机器人配置:\n\nUseQQBot = false\nClientPort = 10023\nLocate = \"/qqEvent\"\nOwnerQQ = \"123456789\"\nQQGroup = \"123456789\"\n\n\n";
+		outcfgFile <<
+		"# 基础配置:\n" <<
+		"LanguageFile = \"\"\n"<<
+		"IPAddress = \"127.0.0.1\"\n" <<
+		"ServerPort = 2333\n" <<
+		"WebUIPort = 5000\n" <<
+		"ServerLocate = \"D:/NiaServer-Core/bedrock_server.exe\"\n" <<
+		"AutoStartServer = false\n" <<
+		"AutoBackup = false\n" <<
+		"BackupHour = 4\n" <<
+		"BackupMinute = 0\n" <<
+		"BackupSecond = 0\n" <<
+		"BackupFrom = \"D:/NiaServer-Core/worlds/250117\"\n" <<
+		"BackupTo = \"./backup\"\n\n" <<
+		"# 功能配置:\n" <<
+		"UseCmd = false\n\n" <<
+		"# QQ机器人配置:\n" <<
+		"UseQQBot = false\n" <<
+		"QQIPAddress = \"127.0.0.1\"\n" <<
+		"QQClientPort = 10023\n" <<
+		"QQServerPort = 10086\n" <<
+		"Locate = \"/qq_event\"\n" <<
+		"OwnerQQ = \"123456789\"\n" <<
+		"QQGroup = \"123456789\"\n";
 		outcfgFile.close();
 		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
 	} else {
 		IPAddress = par.getString("IPAddress");
 		ServerLocate = par.getString("ServerLocate");
-		AutoBackup = par.getBool("AutoBackup");
-		AutoStartServer = par.getBool("AutoStartServer");
 		ServerPort = par.getInt("ServerPort");
+		WebUIPort = par.getInt("WebUIPort");
+		AutoStartServer = par.getBool("AutoStartServer");
+		AutoBackup = par.getBool("AutoBackup");
+		BackupHour = par.getInt("BackupHour");
+		BackupMinute = par.getInt("BackupMinute");
+		BackupSecond = par.getInt("BackupSecond");
+		BackupFrom = par.getString("BackupFrom");
+		BackupTo = par.getString("BackupTo");
 		UseCmd = par.getBool("UseCmd");
 		UseQQBot = par.getBool("UseQQBot");
-		ClientPort = par.getInt("ClientPort");
+		QQIPAddress = par.getString("QQIPAddress");
+		QQClientPort = par.getInt("QQClientPort");
+		QQServerPort = par.getInt("QQServerPort");
 		Locate = par.getString("Locate");
 		OwnerQQ = par.getString("OwnerQQ");
 		QQGroup = par.getString("QQGroup");
@@ -308,10 +349,10 @@ static CFGPAR::parser par;
 		else XINFO("语言配置已加载成功");
 	}
 
-	INFO(XX("sapi事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + XX(" 上成功启动"));
+	INFO(XX("sapi事件监听服务器已在 http://") + IPAddress + ":" + std::to_string(ServerPort) + XX(" 上成功启动"));
 	if (UseQQBot) {
-		INFO(XX("qq-bot事件监听服务器已在 ") + IPAddress + ":" + std::to_string(ServerPort) + Locate + XX(" 上成功启动"));
-		INFO(XX("qq-bot客户端已在 ") + IPAddress + ":" + std::to_string(ClientPort) + XX(" 上成功启动"));
+		INFO(XX("qq-bot事件监听服务器已在 http://") + QQIPAddress + ":" + std::to_string(QQServerPort) + Locate + XX(" 上成功启动"));
+		INFO(XX("qq-bot客户端已在 http://") + QQIPAddress + ":" + std::to_string(QQClientPort) + XX(" 上成功启动"));
 	}
 	XINFO("项目地址：https://github.com/Nia-Server/NIAHttpBOT/");
 	XINFO("项目作者：@NIANIANKNIA @jiansyuan");
@@ -329,6 +370,7 @@ static CFGPAR::parser par;
 
 	//初始化服务器
 	httplib::Server svr;
+	httplib::Server qqsvr;
 
     svr.Post("/GetConfig", [](const httplib::Request& req, httplib::Response& res){
 		rapidjson::Document req_json;
@@ -391,7 +433,7 @@ static CFGPAR::parser par;
 
 
 	//qq机器人主函数
-	main_qqbot(svr);
+	main_qqbot(qqsvr);
 
 	//初始化游戏API
 	init_game_API(svr);
@@ -400,63 +442,8 @@ static CFGPAR::parser par;
 	init_file_API(svr);
 
 	//启动服务器
-	if (AutoStartServer) {
-		StartServer();
-	}
+	if (AutoStartServer) StartServer();
 
-	if(par.getBool("AutoBackup", false))
-	std::thread([]() {
-        while (true) {
-            std::time_t current_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            std::tm current_tm = *std::localtime(&current_time_t);
-
-            current_tm.tm_hour = par.getInt("BackupHour", 4);
-            current_tm.tm_min = par.getInt("BackupMinute", 0)%60;
-            current_tm.tm_sec = par.getInt("BackupSecond", 0)%60;
-
-            std::time_t target_time_t = std::mktime(&current_tm);
-
-            if (target_time_t <= current_time_t) {
-                current_tm.tm_mday += 1; 
-                target_time_t = std::mktime(&current_tm);
-            }
-
-            double seconds_to_wait = difftime(target_time_t, current_time_t);
-
-            std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(seconds_to_wait)));
-
-			
-			std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
-			StopServer();
-
-			std::this_thread::sleep_for(std::chrono::seconds(5));
-
-			std::string From = par.getString("BackupFrom", "./worlds");
-			std::string To = par.getString("BackupTo", "./backup");
-
-			// 获取当前时间作为文件名
-			std::tm *time_info = std::localtime(&now);
-			char buffer[80];
-			std::strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", time_info);
-			std::string backup_filename = std::string(buffer) + ".zip"; // 使用当前时间作为文件名
-
-			// 创建目标路径
-			std::string backup_file_path = To + "/" + backup_filename;
-
-			// 使用系统命令压缩指定目录
-			std::string command = "zip -r \"" + backup_file_path + "\" \"" + From + "\"";
-			std::cout << "Running command: " << command << std::endl;
-
-			// 执行压缩命令
-			int result = std::system(command.c_str());
-			if (result == 0) {
-				std::cout << "Backup successful: " << backup_file_path << std::endl;
-			} else {
-				std::cout << "Backup failed!" << std::endl;
-			}
-        }
-    }).detach(); 
 
 	//监听终端命令输入
 	using CommandHandler = std::function<void(const std::vector<std::string>&)>;
@@ -465,7 +452,7 @@ static CFGPAR::parser par;
 
     commandMap["help"] = [](const std::vector<std::string>&) {
         std::cout << "可用指令列表：" << std::endl;
-        std::cout << "  reload - 重启程序" << std::endl;
+        std::cout << "  relstart - 重启程序" << std::endl;
         std::cout << "  stop - 关闭程序" << std::endl;
         // std::cout << "  setcfg <cfgname> <cfgdata> - 设置配置项" << std::endl;
 		std::cout << "  startserver - 启动服务器(请在正确配置配置文件后使用)" << std::endl;
@@ -616,6 +603,7 @@ static CFGPAR::parser par;
     });
 
 	svr.listen(IPAddress, ServerPort);
+	qqsvr.listen(QQIPAddress, QQServerPort);
 
     // 等待输入线程完成
     inputThread.join();

@@ -5,14 +5,16 @@
 //读取配置文件
 //CFGPAR::parser par;
 
-//获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,ClientPort
+//获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,QQClientPort
 extern std::string ServerLocate;
 extern std::string Locate;
 extern bool UseQQBot;
 extern std::string OwnerQQ;
 extern std::string QQGroup;
 extern std::string IPAddress;
-extern int ClientPort;
+extern int QQClientPort;
+
+
 
 //声明qqbot
 QQBot* qqbot;
@@ -304,6 +306,18 @@ void changeBindXboxID(const command_addition_info& info, const std::vector<std::
 		players_data_file.close();
 		//向群聊发送类似“改绑Xboxid成功,改绑的Xboxid为：xxx”
 		qqbot->send_group_message(info.group_id, "改绑Xboxid成功,改绑的Xboxid为：" + new_xboxid);
+		//将玩家XboxID添加到白名单
+		if (AddPlayerToWhitelist(new_xboxid)) {
+			qqbot->send_group_message(info.group_id, "已将新的玩家XboxID添加到白名单");
+		} else {
+			qqbot->send_group_message(info.group_id, "新的玩家XboxID添加到白名单失败，请联系管理员手动添加");
+		}
+		//移除旧的XboxID
+		if (RemovePlayerFromWhitelist(players_data[info.target_qq.c_str()]["xboxid"].GetString())) {
+			qqbot->send_group_message(info.group_id, "已将旧的玩家XboxID从白名单移除");
+		} else {
+			qqbot->send_group_message(info.group_id, "旧的玩家XboxID从白名单移除失败，请联系管理员手动移除");
+		}
 		return ;
 	} else {
 		//向群聊发送消息“改绑失败，未找到该QQ号！”
@@ -752,7 +766,7 @@ void main_qqbot(httplib::Server &svr) {
 	INFO("已启用QQ机器人相关功能");
 
     //初始化qqbot
-    qqbot = new QQBot(IPAddress, ClientPort);
+    qqbot = new QQBot(IPAddress, QQClientPort);
 	//尝试与QQ机器人建立连接
 	auto get_status_res = qqbot->get_status();
 	//检查是否成功连接到QQ机器人

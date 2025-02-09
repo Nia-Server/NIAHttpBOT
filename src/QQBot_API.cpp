@@ -1,7 +1,7 @@
 #include "QQBot_API.h"
 
-QQBot::QQBot(const std::string& IPAddress, int ClientPort)
-    : cli(IPAddress + ":" + std::to_string(ClientPort)) {}
+QQBot::QQBot(const std::string& IPAddress, int QQClientPort)
+    : cli(IPAddress + ":" + std::to_string(QQClientPort)) {}
 
 
 int32_t QQBot::send_private_message(const std::string & user_id, const std::string & input_message, bool auto_escape) {

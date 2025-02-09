@@ -1,16 +1,16 @@
-# v1.0.0 更新日志
+# v1.0.1 更新日志
 
 [![NIAHttpBOT-VERSION](https://img.shields.io/badge/NIAHttpBOT-v1.0.0-blue?style=for-the-badge&logo=appveyor)](https://github.com/Nia-Server/NIAHttpBOT/) [![NapCatQQ-VERSION](https://img.shields.io/badge/NapCatQQ-v4.3.3-green?style=for-the-badge&logo=appveyor)](https://github.com/NapNeko/NapCatQQ/releases/tag/v4.3.3)
 
 > 本项目为 [NiaServer-Core](https://github.com/Nia-Server/NiaServer-Core) 的子项目。
 
-**自 NiaServer-Core 上发布的 v1.4.0 正式版，发生了如下变化**
 
 
 ## 优化
 
-1. 统一BDS服务器与NIAHttpBOT日志输出样式
-2. 配置文件读取逻辑
+配置文件项目内容
+
+变更前内容如下
 
 ## 新增
 

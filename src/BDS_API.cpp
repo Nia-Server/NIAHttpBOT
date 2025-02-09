@@ -1,5 +1,12 @@
 #include "BDS_API.h"
 
+extern int BackupHour;
+extern int BackupMinute;
+extern int BackupSecond;
+extern std::string BackupFrom;
+extern std::string BackupTo;
+
+
 #ifdef WIN32
 STARTUPINFO si;
 PROCESS_INFORMATION pi;
@@ -109,7 +116,6 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     return FALSE;
 }
 #endif
-
 
 
 bool StartServer() {
@@ -248,6 +254,61 @@ bool StopServer() {
     return false;
 }
 
+void BackupServer() {
+    std::thread([]() {
+        while (true) {
+            std::time_t current_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+            std::tm current_tm = *std::localtime(&current_time_t);
+
+            current_tm.tm_hour = BackupHour;
+            current_tm.tm_min = BackupMinute%60;
+            current_tm.tm_sec = BackupSecond%60;
+
+            std::time_t target_time_t = std::mktime(&current_tm);
+
+            if (target_time_t <= current_time_t) {
+                current_tm.tm_mday += 1;
+                target_time_t = std::mktime(&current_tm);
+            }
+
+            double seconds_to_wait = difftime(target_time_t, current_time_t);
+
+            std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(seconds_to_wait)));
+
+			std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+			StopServer();
+
+			std::this_thread::sleep_for(std::chrono::seconds(5));
+
+			std::string From = BackupFrom;
+			std::string To = BackupTo;
+
+			// 获取当前时间作为文件名
+			std::tm *time_info = std::localtime(&now);
+			char buffer[80];
+			std::strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", time_info);
+			std::string backup_filename = std::string(buffer) + ".zip"; // 使用当前时间作为文件名
+
+			// 创建目标路径
+			std::string backup_file_path = To + "/" + backup_filename;
+
+			// 使用系统命令压缩指定目录
+			std::string command = "zip -r \"" + backup_file_path + "\" \"" + From + "\"";
+			std::cout << "Running command: " << command << std::endl;
+
+			// 执行压缩命令
+			int result = std::system(command.c_str());
+			if (result == 0) {
+				std::cout << "Backup successful: " << backup_file_path << std::endl;
+                return true;
+			} else {
+                std::cout << "Backup failed!" << std::endl;
+                return false;
+			}
+        }
+    }).detach();
+}
 
 std::string runCommand(const std::string& input_command) {
     #ifdef WIN32
@@ -312,7 +373,7 @@ std::string runCommand(const std::string& input_command) {
 bool AddPlayerToWhitelist(const std::string& player_name) {
     std::string command = "whitelist add " + player_name;
     std::string result = runCommand(command);
-    if (result.find("Player added to allowlist") != std::string::npos) {
+    if (result.find("Player added to allowlist") != std::string::npos || result.find("Player already in allowlist") != std::string::npos) {
         return true;
     } else {
         return false;
