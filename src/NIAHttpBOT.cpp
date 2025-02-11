@@ -63,6 +63,8 @@ If you have any problems with this project, please contact the authors.
 
 #include "Graphics.hpp"
 #include "OBJ_Loader.h"
+#include "WebUI.hpp"
+
 
 //定义版本号
 #define VERSION "v1.0.1"
@@ -84,7 +86,10 @@ std::string BackupTo = "./backup";
 
 bool UseCmd = false;
 bool UseQQBot = false;
-std::string QQIPAddress = "127.0.0.1";
+std::string QQIPAddress = "127.0.0.1",
+WebUIWebsite, WebUIFile, WebUIWebsitePath;
+bool EnableWebUI;
+
 int QQClientPort = 10023;
 int QQServerPort = 10086;
 std::string Locate = "/qqEvent";
@@ -302,7 +307,8 @@ static CFGPAR::parser par;
 		"LanguageFile = \"\"\n"<<
 		"IPAddress = \"127.0.0.1\"\n" <<
 		"ServerPort = 2333\n" <<
-		"WebUIPort = 5000\n" <<
+		"WebUIFile = \"./WebUI\"\n" <<
+		"WebUIWebsitePath = \"/\"\n" <<
 		"ServerLocate = \"D:/NiaServer-Core/bedrock_server.exe\"\n" <<
 		"AutoStartServer = false\n" <<
 		"AutoBackup = false\n" <<
@@ -324,25 +330,27 @@ static CFGPAR::parser par;
 		outcfgFile.close();
 		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
 	} else {
-		IPAddress = par.getString("IPAddress");
-		ServerLocate = par.getString("ServerLocate");
-		ServerPort = par.getInt("ServerPort");
-		WebUIPort = par.getInt("WebUIPort");
-		AutoStartServer = par.getBool("AutoStartServer");
-		AutoBackup = par.getBool("AutoBackup");
-		BackupHour = par.getInt("BackupHour");
-		BackupMinute = par.getInt("BackupMinute");
-		BackupSecond = par.getInt("BackupSecond");
-		BackupFrom = par.getString("BackupFrom");
-		BackupTo = par.getString("BackupTo");
-		UseCmd = par.getBool("UseCmd");
-		UseQQBot = par.getBool("UseQQBot");
-		QQIPAddress = par.getString("QQIPAddress");
-		QQClientPort = par.getInt("QQClientPort");
-		QQServerPort = par.getInt("QQServerPort");
-		Locate = par.getString("Locate");
-		OwnerQQ = par.getString("OwnerQQ");
-		QQGroup = par.getString("QQGroup");
+		IPAddress = par.getString("IPAddress", "asdasd");
+		ServerLocate = par.getString("ServerLocate", "./");
+		ServerPort = par.getInt("ServerPort", 114514);
+		EnableWebUI = par.getBool("EnableWebUI", true);
+		WebUIWebsitePath = par.getString("WebUIWebsitePath", "/");
+		WebUIFile = par.getString("WebUIFile", "./WebUI");
+		AutoStartServer = par.getBool("AutoStartServer", false);
+		AutoBackup = par.getBool("AutoBackup", false);
+		BackupHour = par.getInt("BackupHour", 4);
+		BackupMinute = par.getInt("BackupMinute", 0);
+		BackupSecond = par.getInt("BackupSecond", 0);
+		BackupFrom = par.getString("BackupFrom", "./");
+		BackupTo = par.getString("BackupTo", "./backup");
+		UseCmd = par.getBool("UseCmd", false);
+		UseQQBot = par.getBool("UseQQBot", false);
+		QQIPAddress = par.getString("QQIPAddress", "1114514");
+		QQClientPort = par.getInt("QQClientPort", 114514);
+		QQServerPort = par.getInt("QQServerPort", 114514);
+		Locate = par.getString("Locate", "114514");
+		OwnerQQ = par.getString("OwnerQQ", "114514");
+		QQGroup = par.getString("QQGroup", "114514");
 		INFO("已成功读取配置文件");
 		if(!par.hasKey("LanguageFile") || !par.getString("LanguageFile").size()) INFO("已使用默认语言");
 		else if(!i18n.loadFromFile(par.getString("LanguageFile"))) WARN("语言文件加载失败");
@@ -367,6 +375,10 @@ static CFGPAR::parser par;
 
 
 	#endif
+
+
+
+	
 
 	//初始化服务器
 	httplib::Server svr;
@@ -443,6 +455,15 @@ static CFGPAR::parser par;
 
 	//启动服务器
 	if (AutoStartServer) StartServer();
+
+	if(EnableWebUI | 1){
+		
+		WebUI webUI(WebUIWebsitePath, WebUIFile, &svr);
+		INFO("the server has been started in the address: "+IPAddress+":"+std::to_string(ServerPort)+WebUIWebsitePath);
+
+		INFO("the website file is in the path: " + WebUIFile);
+	}
+	
 
 
 	//监听终端命令输入
