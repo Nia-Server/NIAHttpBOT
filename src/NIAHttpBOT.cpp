@@ -206,10 +206,11 @@ signed int main(signed int argc, char** argv) {
 
 
 static CFGPAR::parser par;
-	// G g1(10, 10, 10);
-	// convertOBJToGrid("bunny.obj", g1);
-	// g1.autoAdjust();
-	// g1.calcGrid();
+	G g1(40, 40, 40);
+	convertOBJToGrid("bunny.obj", g1);
+	g1.autoAdjust();
+	g1.calcGrid();
+	std::cout<<g1.getJson();//return 0;
 	// g1.printGrid();
 
 	//g1.setResultSize(20,20,20);

@@ -21,6 +21,8 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 #include <algorithm>
 #include <bitset>
 #include <cmath>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 #define getIndex(x,y,z) ((x*sizeX+y)*sizeY+z)
 
@@ -28,7 +30,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 class G {
 
 private:
-    int sizeX, sizeY, sizeZ;
+    int sizeX, sizeY, sizeZ, num;
     float scale;
     std::pair<float, float> rangeX, rangeY, rangeZ;
     std::vector<uint8_t> grid;
@@ -52,6 +54,7 @@ public:
     void printGrid();
     void calcGrid();
     const std::vector<uint8_t>& getGrid();
+    std::string getJson();
     //bool pointInTriangle(const Eigen::Vector3f&, const Eigen::Vector3f&, const Eigen::Vector3f&, const Eigen::Vector3f&);
     //bool pointIn3DModel(const Eigen::Vector3f&, const std::vector<Eigen::Vector3f>&, const std::vector<Eigen::Vector3i>&);
 
@@ -68,6 +71,7 @@ G::G(int x, int y, int z){
 
 inline void G::initializeGrid() {
     sizeX=sizeY=sizeZ=0,
+    num=0,
     scale = 1.f,
     rangeX=rangeY=rangeZ={+std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity()},
     grid.clear(),
@@ -180,6 +184,7 @@ void G::calcGrid(){
                 for(auto &i : faces) 
                     res += mollerTrumbore(std::get<0>(i), std::get<1>(i), std::get<2>(i), xyz);
                 grid[getIndex(x, y, z)] = res & 1;
+                num += grid[getIndex(x, y, z)];
             }
 
 }
@@ -197,6 +202,43 @@ void G::printGrid() {
 const std::vector<uint8_t>& G::getGrid(){
     return grid;
 }
+
+std::string G::getJson(){
+
+    rapidjson::StringBuffer s;
+    rapidjson::Writer<rapidjson::StringBuffer> w(s);
+    w.StartObject();
+    w.Key("task_id");
+    w.Int64(114514);
+    w.Key("task_name");
+    w.String("obj task 114514");
+    w.Key("pos");
+    w.StartArray();
+    w.String("minecraft:overworld");
+    for(int i=0;i<3;i++) w.Int(114514);
+    w.EndArray();
+    w.Key("block_nums");
+    w.Int64(num);
+    w.Key("block_data");
+    w.StartArray();
+    for (int z = 0; z < sizeZ; ++z) 
+        for (int y = 0; y < sizeY; ++y) 
+            for (int x = 0; x < sizeX; ++x) 
+                if (grid[getIndex(x, y, z)])  {
+                    w.StartArray();
+                    w.String("minecraft:stone");
+                    w.Int(x);
+                    w.Int(y);
+                    w.Int(z);
+                    w.EndArray();
+                }
+    w.EndArray();
+    w.EndObject();
+
+    return s.GetString();
+}
+
+
 
 #undef getIndex
 
