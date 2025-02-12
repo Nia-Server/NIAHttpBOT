@@ -19,27 +19,22 @@ jobs:
         with:
           run-build: true
           build-dir: NIAHttpBOT
-          build-args: --config Release
+          build-args: --config Release -j 8
       - name: Upload the exe file
         uses: actions/upload-artifact@v4
         with:
           name: NIAHttpBOT.exe
-          path: ./NIAHttpBOT/Debug/NIAHttpBOT.exe
-      - name: Upload the pdb file
-        uses: actions/upload-artifact@v4
-        with:
-          name: NIAHttpBOT.pdb
-          path: ./NIAHttpBOT/Debug/NIAHttpBOT.pdb
+          path: ./NIAHttpBOT/Release/NIAHttpBOT.exe
       - name: Upload the libssl-3-x64.dll
         uses: actions/upload-artifact@v4
         with:
           name: libssl-3-x64.dll
-          path: ./NIAHttpBOT/Debug/libssl-3-x64.dll
+          path: ./NIAHttpBOT/Release/libssl-3-x64.dll
       - name: Upload the libcrypto-3-x64.dll\
         uses: actions/upload-artifact@v4
         with:
           name: libcrypto-3-x64.dll
-          path: ./NIAHttpBOT/Debug/libcrypto-3-x64.dll
+          path: ./NIAHttpBOT/Release/libcrypto-3-x64.dll
 
   build-linux:
     runs-on: ubuntu-latest
