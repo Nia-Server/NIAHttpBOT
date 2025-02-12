@@ -213,11 +213,22 @@ void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
 
 
 
+class TEST{
 
+
+public:
+
+httplib::Client cli;
+TEST(const std::string &str) : cli(str) {}
+
+};
 
 signed int main(signed int argc, char** argv) {
 
+// TEST *tttt;
+// tttt = new TEST("dsaasdasd:1234");
 
+// Sleep(9999999999);
 
 static CFGPAR::parser par;
 	// G g1(10, 10, 10);

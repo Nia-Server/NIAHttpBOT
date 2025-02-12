@@ -771,7 +771,6 @@ void main_qqbot(httplib::Server &svr) {
 
 
 
-	return;
 	//尝试与QQ机器人建立连接
 	auto get_status_res = qqbot->get_status();
 	//检查是否成功连接到QQ机器人
