@@ -19,7 +19,7 @@ jobs:
         with:
           run-build: true
           build-dir: NIAHttpBOT
-          options: CMAKE_BUILD_TYPE=Release
+          args: --config Release
       - name: Upload the exe file
         uses: actions/upload-artifact@v4
         with:
