@@ -19,6 +19,8 @@
 
 class QQBot {
 public:
+
+~QQBot();
     QQBot(const std::string& IPAddress, int QQClientPort);
     /**
      * @brief 发送私聊消息
@@ -197,7 +199,7 @@ public:
 
 
 private:
-    httplib::Client cli;
+    httplib::Client* cli;
 
 };
 

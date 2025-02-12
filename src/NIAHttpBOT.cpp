@@ -219,7 +219,6 @@ signed int main(signed int argc, char** argv) {
 
 
 
-
 static CFGPAR::parser par;
 	// G g1(10, 10, 10);
 	// convertOBJToGrid("bunny.obj", g1);
@@ -443,9 +442,8 @@ static CFGPAR::parser par;
 		res.set_content(cmdres, "text/plain"), res.status = excd; // exitCode
 	});
 
-
 	//qq机器人主函数
-	main_qqbot(qqsvr);
+	main_qqbot(qqsvr );
 
 	//初始化游戏API
 	init_game_API(svr);

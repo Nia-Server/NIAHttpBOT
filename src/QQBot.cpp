@@ -13,11 +13,11 @@ extern std::string OwnerQQ;
 extern std::string QQGroup;
 extern std::string IPAddress;
 extern int QQClientPort;
-
+QQBot* qqbot;
 
 
 //声明qqbot
-QQBot* qqbot;
+//QQBot* qqbot; dangerous!!!!!!
 
 std::vector<std::string> forbiddenWords;
 std::vector<std::string> msgs;
@@ -757,7 +757,6 @@ bool containsForbiddenWords(const std::string& input) {
     }
     return false;
 }
-
 //主函数
 void main_qqbot(httplib::Server &svr) {
 	if (!UseQQBot) {
@@ -765,8 +764,14 @@ void main_qqbot(httplib::Server &svr) {
 	};
 	INFO("已启用QQ机器人相关功能");
 
-    //初始化qqbot
+    //初始化qqbot 
+	//dangerous!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     qqbot = new QQBot(IPAddress, QQClientPort);
+
+
+
+
+	return;
 	//尝试与QQ机器人建立连接
 	auto get_status_res = qqbot->get_status();
 	//检查是否成功连接到QQ机器人

@@ -1,8 +1,16 @@
 #include "QQBot_API.h"
 
 QQBot::QQBot(const std::string& IPAddress, int QQClientPort)
-    : cli(IPAddress + ":" + std::to_string(QQClientPort)) {}
+    {
+    
+        cli = new httplib::Client(IPAddress + ":" + std::to_string(QQClientPort));
+    
+    }
 
+
+QQBot::~QQBot(){
+    delete cli;
+}    
 
 int32_t QQBot::send_private_message(const std::string & user_id, const std::string & input_message, bool auto_escape) {
     std::string auto_escape_str = auto_escape ? "true" : "false";
@@ -29,7 +37,7 @@ int32_t QQBot::send_private_message(const std::string & user_id, const std::stri
     post_data.Accept(writer);
     //将字符串流转化为字符串
     std::string post_data_str = buffer.GetString();
-    auto res = cli.Post("/send_private_msg", post_data_str, "application/json");
+    auto res = cli->Post("/send_private_msg", post_data_str, "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -73,7 +81,7 @@ int32_t QQBot::send_group_message(const std::string & group_id, const std::strin
     post_data.Accept(writer);
     //将字符串流转化为字符串
     std::string post_data_str = buffer.GetString();
-    auto res = cli.Post("/send_group_msg", post_data_str, "application/json");
+    auto res = cli->Post("/send_group_msg", post_data_str, "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -94,7 +102,7 @@ int32_t QQBot::send_group_message(const std::string & group_id, const std::strin
 }
 
 int QQBot::delete_msg(const int32_t &message_id) {
-    auto res = cli.Post("/delete_msg", "{\"message_id\":" + std::to_string(message_id) + "}", "application/json");
+    auto res = cli->Post("/delete_msg", "{\"message_id\":" + std::to_string(message_id) + "}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -114,7 +122,7 @@ int QQBot::delete_msg(const int32_t &message_id) {
 }
 
 int QQBot::send_like(const std::string & user_id, int times) {
-    auto res = cli.Post("/send_like", "{\"user_id\":\"" + user_id + "\",\"times\":" + std::to_string(times) + "}", "application/json");
+    auto res = cli->Post("/send_like", "{\"user_id\":\"" + user_id + "\",\"times\":" + std::to_string(times) + "}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -138,7 +146,7 @@ int QQBot::send_like(const std::string & user_id, int times) {
 
 int QQBot::set_group_kick(const std::string & group_id, const std::string & user_id, bool reject_add_request) {
     std::string reject_add_request_str = reject_add_request ? "true" : "false";
-    auto res = cli.Post("/set_group_kick", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"reject_add_request\":\"" + reject_add_request_str +"\"}", "application/json");
+    auto res = cli->Post("/set_group_kick", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"reject_add_request\":\"" + reject_add_request_str +"\"}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -161,7 +169,7 @@ int QQBot::set_group_kick(const std::string & group_id, const std::string & user
 }
 
 int QQBot::set_group_ban(const std::string & group_id, const std::string & user_id, long long duration) {
-    auto res = cli.Post("/set_group_ban", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"duration\":" + std::to_string(duration) + "}", "application/json");
+    auto res = cli->Post("/set_group_ban", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"duration\":" + std::to_string(duration) + "}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -185,7 +193,7 @@ int QQBot::set_group_ban(const std::string & group_id, const std::string & user_
 
 int QQBot::set_group_whole_ban(const std::string & group_id, bool enable) {
     std::string enable_str = enable ? "true" : "false";
-    auto res = cli.Post("/set_group_whole_ban", "{\"group_id\":\"" + group_id + "\",\"enable\":\"" + enable_str + "\"}", "application/json");
+    auto res = cli->Post("/set_group_whole_ban", "{\"group_id\":\"" + group_id + "\",\"enable\":\"" + enable_str + "\"}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -209,7 +217,7 @@ int QQBot::set_group_whole_ban(const std::string & group_id, bool enable) {
 
 int QQBot::set_group_admin(const std::string & group_id, const std::string & user_id, bool enable) {
     std::string enable_str = enable ? "true" : "false";
-    auto res = cli.Post("/set_group_admin", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"enable\":\"" + enable_str + "\"}", "application/json");
+    auto res = cli->Post("/set_group_admin", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"enable\":\"" + enable_str + "\"}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -232,7 +240,7 @@ int QQBot::set_group_admin(const std::string & group_id, const std::string & use
 }
 
 int QQBot::set_group_card(const std::string & group_id, const std::string & user_id, const std::string & card) {
-    auto res = cli.Post("/set_group_card", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"card\":\"" + card + "\"}", "application/json");
+    auto res = cli->Post("/set_group_card", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"card\":\"" + card + "\"}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -255,7 +263,7 @@ int QQBot::set_group_card(const std::string & group_id, const std::string & user
 }
 
 int QQBot::set_group_name(const std::string & group_id, const std::string & group_name) {
-    auto res = cli.Post("/set_group_name", "{\"group_id\":\"" + group_id + "\",\"group_name\":\"" + group_name + "\"}", "application/json");
+    auto res = cli->Post("/set_group_name", "{\"group_id\":\"" + group_id + "\",\"group_name\":\"" + group_name + "\"}", "application/json");
     if (res && res.value().status != 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -280,7 +288,7 @@ int QQBot::set_group_name(const std::string & group_id, const std::string & grou
 
 int QQBot::set_group_leave(const std::string & group_id, bool is_dismiss) {
     std::string is_dismiss_str = is_dismiss ? "true" : "false";
-    auto res = cli.Post("/set_group_leave", "{\"group_id\":\"" + group_id + "\",\"is_dismiss\":\"" + is_dismiss_str + "\"}", "application/json");
+    auto res = cli->Post("/set_group_leave", "{\"group_id\":\"" + group_id + "\",\"is_dismiss\":\"" + is_dismiss_str + "\"}", "application/json");
     if (res) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -300,7 +308,7 @@ int QQBot::set_group_leave(const std::string & group_id, bool is_dismiss) {
 }
 
 int QQBot::set_group_request(const std::string & flag, const std::string & sub_type, const std::string & approve, const std::string & reason) {
-    auto res = cli.Post("/set_group_request", "{\"flag\":\"" + flag + "\",\"sub_type\":\"" + sub_type + "\",\"approve\":\"" + approve + "\",\"reason\":\"" + reason + "\"}", "application/json");
+    auto res = cli->Post("/set_group_request", "{\"flag\":\"" + flag + "\",\"sub_type\":\"" + sub_type + "\",\"approve\":\"" + approve + "\",\"reason\":\"" + reason + "\"}", "application/json");
     if (res) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -321,7 +329,7 @@ int QQBot::set_group_request(const std::string & flag, const std::string & sub_t
 
 QQBot::login_info QQBot::get_login_info() {
     login_info info;
-    auto res = cli.Get("/get_login_info");
+    auto res = cli->Get("/get_login_info");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -349,7 +357,7 @@ QQBot::login_info QQBot::get_login_info() {
 
 QQBot::bot_status QQBot::get_status() {
     bot_status status;
-    auto res = cli.Get("/get_status");
+    auto res = cli->Get("/get_status");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -378,7 +386,7 @@ QQBot::bot_status QQBot::get_status() {
 
 std::vector<QQBot::group_list> QQBot::get_group_list() {
     std::vector<group_list> group_list;
-    auto res = cli.Get("/get_group_list");
+    auto res = cli->Get("/get_group_list");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
@@ -410,7 +418,7 @@ std::vector<QQBot::group_list> QQBot::get_group_list() {
 
 QQBot::group_member_info QQBot::get_group_member_info(const std::string & group_id, const std::string & user_id, bool no_cache) {
     group_member_info info;
-    auto res = cli.Post("/get_group_member_info", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"no_cache\":" + (no_cache ? "true" : "false") + "}", "application/json");
+    auto res = cli->Post("/get_group_member_info", "{\"group_id\":\"" + group_id + "\",\"user_id\":\"" + user_id + "\",\"no_cache\":" + (no_cache ? "true" : "false") + "}", "application/json");
     if (res && res.value().status == 200) {
         rapidjson::Document doc;
         doc.Parse(res->body.c_str());
