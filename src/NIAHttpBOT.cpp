@@ -595,7 +595,7 @@ static CFGPAR::parser par;
     // 启动输入监听线程
     std::thread inputThread([&commandMap]() {
         std::string line;
-        while (std::getline(std::cin, line)) {
+        while (std::getline(std::cin, line)||1) {
             std::istringstream iss(line);
             std::vector<std::string> tokens;
             std::string token;
