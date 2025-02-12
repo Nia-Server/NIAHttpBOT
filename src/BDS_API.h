@@ -4,7 +4,7 @@
 #include <queue>
 #include <regex>
 #include <thread>
-
+#include <condition_variable>
 
 #include "Logger.hpp"
 
