@@ -333,7 +333,7 @@ static CFGPAR::parser par;
 		IPAddress = par.getString("IPAddress", "asdasd");
 		ServerLocate = par.getString("ServerLocate", "./");
 		ServerPort = par.getInt("ServerPort", 114514);
-		EnableWebUI = par.getBool("EnableWebUI", true);
+		EnableWebUI = par.getBool("EnableWebUI", false);
 		WebUIWebsitePath = par.getString("WebUIWebsitePath", "/");
 		WebUIFile = par.getString("WebUIFile", "./WebUI");
 		AutoStartServer = par.getBool("AutoStartServer", false);
