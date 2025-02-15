@@ -827,6 +827,8 @@ world.afterEvents.worldInitialize.subscribe(() => {
 
 #### [OBJ-Loader](https://github.com/Bly7/OBJ-Loader) - [MIT License](https://github.com/Bly7/OBJ-Loader?tab=MIT-1-ov-file)
 
+#### [Eigen3](https://eigen.tuxfamily.org/) - [Mozilla Public License 2.0](https://www.mozilla.org/en-US/MPL/2.0/)
+
 ## 许可证
 
 本项目基于[`AGPL-3.0`](https://github.com/Nia-Server/NIAHttpBOT/blob/main/LICENSE)开源许可证条款
