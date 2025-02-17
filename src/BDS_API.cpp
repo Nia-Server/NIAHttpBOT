@@ -371,7 +371,7 @@ std::string runCommand(const std::string& input_command) {
 }
 
 bool AddPlayerToWhitelist(const std::string& player_name) {
-    std::string command = "whitelist add " + player_name;
+    std::string command = "whitelist add \"" + player_name + "\"";
     std::string result = runCommand(command);
     if (result.find("Player added to allowlist") != std::string::npos || result.find("Player already in allowlist") != std::string::npos) {
         return true;
@@ -381,7 +381,7 @@ bool AddPlayerToWhitelist(const std::string& player_name) {
 }
 
 bool RemovePlayerFromWhitelist(const std::string& player_name) {
-    std::string command = "whitelist remove " + player_name;
+    std::string command = "whitelist remove \"" + player_name + "\"";
     std::string result = runCommand(command);
     if (result.find("Player removed from allowlist") != std::string::npos) {
         return true;

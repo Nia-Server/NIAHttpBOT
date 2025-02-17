@@ -183,6 +183,9 @@ void bindXboxID(const command_addition_info& info, const std::vector<std::string
 	}
 	//获取XboxID
 	std::string XboxID = args[0];
+	for (int i = 1; i < args.size(); i++) {
+		XboxID += " " + args[i];
+	}
 
 	//读取player_data.json文件
 	std::ifstream players_data_file("player_data.json");
@@ -282,6 +285,9 @@ void changeBindXboxID(const command_addition_info& info, const std::vector<std::
 	}
 	//获取XboxID
 	std::string new_xboxid = args[0];
+	for (int i = 1; i < args.size(); i++) {
+		new_xboxid += " " + args[i];
+	}
 
 	//读取player_data.json文件
 	std::ifstream players_data_file("player_data.json");
