@@ -301,6 +301,7 @@ void changeBindXboxID(const command_addition_info& info, const std::vector<std::
 	rapidjson::IStreamWrapper isw(players_data_file);
 	players_data.ParseStream(isw);
 	if (players_data.HasMember(info.target_qq.c_str())) {
+		std::string old_xboxid = players_data[info.target_qq.c_str()]["xboxid"].GetString();
 		//修改player_data.json文件中的XboxID
 		players_data[info.target_qq.c_str()]["xboxid"].SetString(new_xboxid.c_str(), players_data.GetAllocator());
 		//将players_data对象写入player_data.json文件，缩进为4
@@ -312,17 +313,17 @@ void changeBindXboxID(const command_addition_info& info, const std::vector<std::
 		players_data_file.close();
 		//向群聊发送类似“改绑Xboxid成功,改绑的Xboxid为：xxx”
 		qqbot->send_group_message(info.group_id, "改绑Xboxid成功,改绑的Xboxid为：" + new_xboxid);
+		//移除旧的XboxID
+		if (RemovePlayerFromWhitelist(old_xboxid)) {
+			qqbot->send_group_message(info.group_id, "已将旧的玩家XboxID从白名单移除");
+		} else {
+			qqbot->send_group_message(info.group_id, "旧的玩家XboxID从白名单移除失败，请联系管理员手动移除");
+		}
 		//将玩家XboxID添加到白名单
 		if (AddPlayerToWhitelist(new_xboxid)) {
 			qqbot->send_group_message(info.group_id, "已将新的玩家XboxID添加到白名单");
 		} else {
 			qqbot->send_group_message(info.group_id, "新的玩家XboxID添加到白名单失败，请联系管理员手动添加");
-		}
-		//移除旧的XboxID
-		if (RemovePlayerFromWhitelist(players_data[info.target_qq.c_str()]["xboxid"].GetString())) {
-			qqbot->send_group_message(info.group_id, "已将旧的玩家XboxID从白名单移除");
-		} else {
-			qqbot->send_group_message(info.group_id, "旧的玩家XboxID从白名单移除失败，请联系管理员手动移除");
 		}
 		return ;
 	} else {
