@@ -67,7 +67,7 @@ If you have any problems with this project, please contact the authors.
 
 
 //定义版本号
-#define VERSION "v1.0.1"
+#define VERSION "v1.1.0"
 
 
 std::string LanguageFile = "";
@@ -386,9 +386,6 @@ static CFGPAR::parser par;
 
 	#endif
 
-
-
-	
 
 	//初始化服务器
 	httplib::Server svr;

@@ -22,22 +22,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NIAHttpBOT.exe
-          path: ./NIAhttpBOT/Debug/NIAHttpBOT.exe
-      - name: Upload the pdb file
-        uses: actions/upload-artifact@v4
-        with:
-          name: NIAHttpBOT.pdb
-          path: ./NIAHttpBOT/Debug/NIAHttpBOT.pdb
+          path: ./NIAHttpBOT/Release/NIAHttpBOT.exe
       - name: Upload the libssl-3-x64.dll
         uses: actions/upload-artifact@v4
         with:
           name: libssl-3-x64.dll
-          path: ./NIAHttpBOT/Debug/libssl-3-x64.dll
+          path: ./NIAHttpBOT/Release/libssl-3-x64.dll
       - name: Upload the libcrypto-3-x64.dll\
         uses: actions/upload-artifact@v4
         with:
           name: libcrypto-3-x64.dll
-          path: ./NIAHttpBOT/Debug/libcrypto-3-x64.dll
+          path: ./NIAHttpBOT/Release/libcrypto-3-x64.dll
 
   build-linux:
     runs-on: ubuntu-latest
@@ -68,10 +63,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: NIAHttpBOT.exe
-      - name: Download the pdb file
-        uses: actions/download-artifact@v4
-        with:
-          name: NIAHttpBOT.pdb
       - name: Download the libssl-3-x64.dll
         uses: actions/download-artifact@v4
         with:
@@ -90,7 +81,7 @@ jobs:
         uses: ncipollo/release-action@v1.12.0
         with:
           prerelease: true
-          artifacts: "NIAHttpBOT.exe,NIAHttpBOT.pdb,libssl-3-x64.dll,libcrypto-3-x64.dll,NIAHttpBOT"
+          artifacts: "NIAHttpBOT.exe,libssl-3-x64.dll,libcrypto-3-x64.dll,NIAHttpBOT"
           bodyFile: "CHANGELOG-PRE.md"
           generateReleaseNotes: true
           token: ${{ secrets.GITHUB_TOKEN }}

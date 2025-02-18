@@ -19,7 +19,6 @@ jobs:
         with:
           run-build: true
           build-dir: NIAHttpBOT
-          build-args: --config Release -j 8
       - name: Upload the exe file
         uses: actions/upload-artifact@v4
         with:
