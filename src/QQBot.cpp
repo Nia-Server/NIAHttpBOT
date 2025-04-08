@@ -178,7 +178,7 @@ void unmuteUser(const command_addition_info& info, const std::vector<std::string
 void bindXboxID(const command_addition_info& info, const std::vector<std::string>& args) {
 	//判断参数是否为空
 	if (args.size() < 1) {
-		qqbot->send_group_message(info.group_id, "绑定指令格式错误，绑定格式为:#绑定 <XboxID>");
+		qqbot->send_group_message(info.group_id, "绑定指令格式错误，绑定格式为:#绑定 <XboxID>，注意绑定与XboxID中间有一个空格");
 		return ;
 	}
 	//获取XboxID
@@ -327,8 +327,52 @@ void changeBindXboxID(const command_addition_info& info, const std::vector<std::
 		}
 		return ;
 	} else {
-		//向群聊发送消息“改绑失败，未找到该QQ号！”
-		qqbot->send_group_message(info.group_id, "改绑失败，未在玩家数据库中找到该QQ号！");
+		// //向群聊发送消息“改绑失败，未找到该QQ号！”
+		// qqbot->send_group_message(info.group_id, "改绑失败，未在玩家数据库中找到该QQ号！");
+		//改绑失败则直接创建一个新的玩家数据
+		//新建一个json对象
+		rapidjson::Document player_data;
+		player_data.SetObject();
+		// 添加 "xboxid" 键值对到 player_data 对象中
+		rapidjson::Value xbox(rapidjson::kStringType);
+		xbox.SetString(new_xboxid.c_str(), player_data.GetAllocator());
+		player_data.AddMember("xboxid", xbox, player_data.GetAllocator());
+		// 添加 "qq" 键值对到 player_data 对象中
+		rapidjson::Value qq(rapidjson::kStringType);
+		qq.SetString(info.target_qq.c_str(), player_data.GetAllocator());
+		player_data.AddMember("qq", qq, player_data.GetAllocator());
+		// 添加 "status" 键值对到 player_data 对象中
+		rapidjson::Value status(rapidjson::kStringType);
+		status.SetString("normal", player_data.GetAllocator());
+		player_data.AddMember("status", status, player_data.GetAllocator());
+		// 添加 "ban_time" 键值对到 player_data 对象中
+		rapidjson::Value ban_time(rapidjson::kStringType);
+		ban_time.SetString("0", player_data.GetAllocator());
+		player_data.AddMember("ban_time", ban_time, player_data.GetAllocator());
+		// 添加 "role" 键值对到 player_data 对象中
+		rapidjson::Value role(rapidjson::kStringType);
+		role.SetString("member", player_data.GetAllocator());
+		player_data.AddMember("role", role, player_data.GetAllocator());
+		// 添加 "money" 键值对到 player_data 对象中
+		rapidjson::Value money(rapidjson::kStringType);
+		money.SetString("0", player_data.GetAllocator());
+		player_data.AddMember("money", money, player_data.GetAllocator());
+		//添加 "data:{}" 键值对到 player_data 对象中
+		rapidjson::Value data(rapidjson::kObjectType);
+		data.SetObject();
+		player_data.AddMember("data", data, player_data.GetAllocator());
+		// 添加 player_data 对象到 players_data 对象中
+		rapidjson::Value key(info.target_qq.c_str(), players_data.GetAllocator());
+		players_data.AddMember(key, player_data, players_data.GetAllocator());
+		//将players_data对象写入player_data.json文件，缩进为4
+		std::ofstream players_data_file("player_data.json");
+		rapidjson::OStreamWrapper osw(players_data_file);
+		rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
+		writer.SetIndent(' ', 4); // 设置缩进为4个空格
+		players_data.Accept(writer);
+		players_data_file.close();
+		//向群聊发送类似“改绑Xboxid成功,改绑的Xboxid为：xxx”
+		qqbot->send_group_message(info.group_id, "改绑Xboxid成功,改绑的Xboxid为：" + new_xboxid);
 		return ;
 	}
 }
@@ -946,6 +990,15 @@ void main_qqbot(httplib::Server &svr) {
 			//解析发送者的权限
 			std::string sender_role = qq_event_data["sender"]["role"].GetString();
 
+			//解析发送者的昵称
+			std::string sender_nickname = qq_event_data["sender"]["nickname"].GetString();
+			//判断是否有qq_event_data["sender"]["card"]字段
+			if (qq_event_data["sender"].HasMember("card")) {
+				sender_nickname = qq_event_data["sender"]["card"].GetString();
+			}
+
+			INFO(sender_nickname);
+
 			bool is_command = false;
 			bool is_reply = false;
 			std::string message = "";
@@ -1031,6 +1084,20 @@ void main_qqbot(httplib::Server &svr) {
 				return ;
 			}
 
+			if (containsForbiddenWords(sender_nickname)) {
+				//看发送者是否为管理员或者群主
+				std::string user_permission = "";
+				user_permission = qq_event_data["sender"]["role"].GetString();
+				if (user_permission == "admin" || user_permission == "owner" || sender_qq == OwnerQQ) {
+					return ;
+				}
+				//发送警告消息
+				qqbot->send_group_message(group_id, "群名片中包含违禁词，请修改群名片后再尝试发言");
+				//撤回消息
+				auto delete_msg_res = qqbot->delete_msg(qq_event_data["message_id"].GetInt());
+				return ;
+			}
+
 
 			std::vector<std::string> tokens = splitCommand(message);
 
@@ -1064,16 +1131,22 @@ void main_qqbot(httplib::Server &svr) {
 				executeSystemCommand(info, tokens);
 				return ;
 			}
-
 			//处理回复消息,如果是管理员回复内容为撤回，则撤回原消息以及回复消息
 			if (is_reply) {
-				if (message == "撤回") {
+				if (message == "撤回" || message == " 撤回") {
+					//看发送者是否为管理员或者群主
+					std::string user_permission = "";
+					user_permission = qq_event_data["sender"]["role"].GetString();
+					if (user_permission == "member" || sender_qq != OwnerQQ) {
+						return ;
+					}
 					auto delete_msg_res = qqbot->delete_msg(std::stoi(reply_message_id));
 					if (delete_msg_res == 1) {
 						qqbot->send_private_message(OwnerQQ, "qq[" + sender_qq + "] 在 群[" + group_id + "] 发送了消息：" + message + ",已被管理员成功撤回！");
 					} else {
 						qqbot->send_private_message(OwnerQQ, "qq[" + sender_qq + "] 在 群[" + group_id + "] 发送了消息：" + message + ",撤回失败,请手动撤回！");
 					}
+					INFO(qq_event_data["message_id"].GetInt());
 					auto delete_msg_res2 = qqbot->delete_msg(qq_event_data["message_id"].GetInt());
 				}
 			}
