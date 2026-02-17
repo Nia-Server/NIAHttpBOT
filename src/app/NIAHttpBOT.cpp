@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2025 Nia-Server
+Copyright (C) 2019-2026 Nia-Server
 
 The developer is not responsible for you, and the developer is not obliged to write code for you, and is not liable for any consequences of your use.
 
@@ -33,6 +33,7 @@ If you have any problems with this project, please contact the authors.
 #include <functional>
 #include <sstream>
 #include <queue>
+#include <clocale>
 
 
 #ifdef WIN32 //only enable TLS in windows
@@ -51,7 +52,7 @@ If you have any problems with this project, please contact the authors.
 
 
 
-#include "CFG_Parser.hpp"
+#include "AppConfig.hpp"
 #include "I18Nize.hpp"
 #include "Logger.hpp"
 
@@ -92,7 +93,6 @@ bool EnableWebUI;
 
 int QQClientPort = 10023;
 int QQServerPort = 10086;
-std::string Locate = "/qqEvent";
 std::string OwnerQQ = "123456789";
 std::string QQGroup = "123456789";
 
@@ -230,7 +230,8 @@ signed int main(signed int argc, char** argv) {
 
 // Sleep(9999999999);
 
-static CFGPAR::parser par;
+	const std::string configPath = "./NIAHttpBOT.json";
+	AppCfg::Config appConfig = AppCfg::DefaultConfig();
 	// G g1(10, 10, 10);
 	// convertOBJToGrid("bunny.obj", g1);
 	// g1.autoAdjust();
@@ -241,6 +242,9 @@ static CFGPAR::parser par;
 
 	//g1.printGrid();
 	#ifdef WIN32
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
+	std::setlocale(LC_ALL, ".UTF-8");
     EnableVirtualTerminalProcessing();
     #endif
 
@@ -250,7 +254,6 @@ static CFGPAR::parser par;
 	//检测是否有其他进程正在运行&&终端关闭检测
 	#ifdef WIN32
 		SetConsoleCtrlHandler(ConsoleHandler, TRUE);
-		SetConsoleOutputCP(65001);
 		HANDLE hMutex = CreateMutex(NULL, FALSE, "NIAHttpBOT");
 		if (hMutex == NULL) {
 			WARN("CreateMutex failed!");
@@ -309,67 +312,50 @@ static CFGPAR::parser par;
 		WARN("这是一个预发布版本，仅供开发者预览，不要在正式生产环境中使用");
 	}
 
-	//首先检查有没有配置文件
-	if (!par.parFromFile("./NIAHttpBOT.cfg")) {
-		std::ofstream outcfgFile("NIAHttpBOT.cfg");
-		outcfgFile <<
-		"# 基础配置:\n" <<
-		"LanguageFile = \"\"\n"<<
-		"IPAddress = \"127.0.0.1\"\n" <<
-		"ServerPort = 2333\n" <<
-		"WebUIFile = \"./WebUI\"\n" <<
-		"WebUIWebsitePath = \"/\"\n" <<
-		"ServerLocate = \"D:/NiaServer-Core/bedrock_server.exe\"\n" <<
-		"AutoStartServer = false\n" <<
-		"AutoBackup = false\n" <<
-		"BackupHour = 4\n" <<
-		"BackupMinute = 0\n" <<
-		"BackupSecond = 0\n" <<
-		"BackupFrom = \"D:/NiaServer-Core/worlds/250117\"\n" <<
-		"BackupTo = \"./backup\"\n\n" <<
-		"# 功能配置:\n" <<
-		"UseCmd = false\n\n" <<
-		"# QQ机器人配置:\n" <<
-		"UseQQBot = false\n" <<
-		"QQIPAddress = \"127.0.0.1\"\n" <<
-		"QQClientPort = 10023\n" <<
-		"QQServerPort = 10086\n" <<
-		"Locate = \"/qq_event\"\n" <<
-		"OwnerQQ = \"123456789\"\n" <<
-		"QQGroup = \"123456789\"\n";
-		outcfgFile.close();
-		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.cfg");
-	} else {
-		IPAddress = par.getString("IPAddress", "asdasd");
-		ServerLocate = par.getString("ServerLocate", "./");
-		ServerPort = par.getInt("ServerPort", 114514);
-		EnableWebUI = par.getBool("EnableWebUI", false);
-		WebUIWebsitePath = par.getString("WebUIWebsitePath", "/");
-		WebUIFile = par.getString("WebUIFile", "./WebUI");
-		AutoStartServer = par.getBool("AutoStartServer", false);
-		AutoBackup = par.getBool("AutoBackup", false);
-		BackupHour = par.getInt("BackupHour", 4);
-		BackupMinute = par.getInt("BackupMinute", 0);
-		BackupSecond = par.getInt("BackupSecond", 0);
-		BackupFrom = par.getString("BackupFrom", "./");
-		BackupTo = par.getString("BackupTo", "./backup");
-		UseCmd = par.getBool("UseCmd", false);
-		UseQQBot = par.getBool("UseQQBot", false);
-		QQIPAddress = par.getString("QQIPAddress", "1114514");
-		QQClientPort = par.getInt("QQClientPort", 114514);
-		QQServerPort = par.getInt("QQServerPort", 114514);
-		Locate = par.getString("Locate", "114514");
-		OwnerQQ = par.getString("OwnerQQ", "114514");
-		QQGroup = par.getString("QQGroup", "114514");
-		INFO("已成功读取配置文件");
-		if(!par.hasKey("LanguageFile") || !par.getString("LanguageFile").size()) INFO("已使用默认语言");
-		else if(!i18n.loadFromFile(par.getString("LanguageFile"))) WARN("语言文件加载失败");
-		else XINFO("语言配置已加载成功");
+	std::string configError;
+	if (!std::filesystem::exists(configPath)) {
+		if (!AppCfg::SaveToJsonFile(configPath, appConfig, configError)) {
+			FAIL("初始化 JSON 配置文件失败: " + configError);
+			return 1;
+		}
+		WARN("未找到配置文件，已自动初始化配置文件 NIAHttpBOT.json");
 	}
+
+	if (!AppCfg::LoadFromJsonFile(configPath, appConfig, configError)) {
+		FAIL("读取 JSON 配置文件失败: " + configError);
+		return 1;
+	}
+
+	LanguageFile = appConfig.LanguageFile;
+	IPAddress = appConfig.IPAddress;
+	ServerPort = appConfig.ServerPort;
+	EnableWebUI = appConfig.EnableWebUI;
+	WebUIFile = appConfig.WebUIFile;
+	WebUIWebsitePath = appConfig.WebUIWebsitePath;
+	ServerLocate = appConfig.ServerLocate;
+	AutoStartServer = appConfig.AutoStartServer;
+	AutoBackup = appConfig.AutoBackup;
+	BackupHour = appConfig.BackupHour;
+	BackupMinute = appConfig.BackupMinute;
+	BackupSecond = appConfig.BackupSecond;
+	BackupFrom = appConfig.BackupFrom;
+	BackupTo = appConfig.BackupTo;
+	UseCmd = appConfig.UseCmd;
+	UseQQBot = appConfig.UseQQBot;
+	QQIPAddress = appConfig.QQIPAddress;
+	QQClientPort = appConfig.QQClientPort;
+	QQServerPort = appConfig.QQServerPort;
+	OwnerQQ = appConfig.OwnerQQ;
+	QQGroup = appConfig.QQGroup;
+
+	INFO("已成功读取配置文件");
+	if (LanguageFile.empty()) INFO("已使用默认语言");
+	else if (!i18n.loadFromFile(LanguageFile)) WARN("语言文件加载失败");
+	else XINFO("语言配置已加载成功");
 
 	INFO(XX("sapi事件监听服务器已在 http://") + IPAddress + ":" + std::to_string(ServerPort) + XX(" 上成功启动"));
 	if (UseQQBot) {
-		INFO(XX("qq-bot事件监听服务器已在 http://") + QQIPAddress + ":" + std::to_string(QQServerPort) + Locate + XX(" 上成功启动"));
+		INFO(XX("qq-bot事件监听服务器已在 http://") + QQIPAddress + ":" + std::to_string(QQServerPort) + XX(" 上成功启动"));
 		INFO(XX("qq-bot客户端已在 http://") + QQIPAddress + ":" + std::to_string(QQClientPort) + XX(" 上成功启动"));
 	}
 	XINFO("项目地址：https://github.com/Nia-Server/NIAHttpBOT/");
@@ -395,29 +381,41 @@ static CFGPAR::parser par;
 		rapidjson::Document req_json;
 		req_json.Parse(req.body.c_str()), res.status = 400;
 		if(req_json.HasParseError()||!req_json.HasMember("Name")||!req_json.HasMember("Type")
-			||!par.hasKey(req_json["Name"].GetString())) [[unlikely]] // Type: B->bool, I->int, C->char, S->string
+			||!req_json["Name"].IsString()||!req_json["Type"].IsString()||req_json["Type"].GetStringLength()!=1) [[unlikely]]
 			return res.set_content("json data error", "text/plain");
-		switch(req_json["Type"].GetString()[0]) {
-			case 'B':
-				if(!par.isBool("Name")) [[unlikely]] goto error;
-				res.set_content(par.getBool("Name")?"1":"0", "text/plain");
-				break;
-			case 'I':
-				if(!par.isInt("Name")) [[unlikely]] goto error;
-				res.set_content(std::to_string(par.getInt("Name")), "text/plain");
-				break;
-			case 'C':
-				if(!par.isChar("Name")) [[unlikely]] goto error;
-				res.set_content(std::string()+par.getChar("Name"), "text/plain");
-				break;
-			case 'S':
-				if(!par.isString("Name")) [[unlikely]] goto error;
-				res.set_content(par.getString("Name"), "text/plain");
-				break;
-			[[unlikely]]default : error:
-				res.status = 114514, res.set_content("config type error", "text/plain");
+		AppCfg::Config currentCfg;
+		currentCfg.LanguageFile = LanguageFile;
+		currentCfg.IPAddress = IPAddress;
+		currentCfg.ServerPort = ServerPort;
+		currentCfg.EnableWebUI = EnableWebUI;
+		currentCfg.WebUIFile = WebUIFile;
+		currentCfg.WebUIWebsitePath = WebUIWebsitePath;
+		currentCfg.ServerLocate = ServerLocate;
+		currentCfg.AutoStartServer = AutoStartServer;
+		currentCfg.AutoBackup = AutoBackup;
+		currentCfg.BackupHour = BackupHour;
+		currentCfg.BackupMinute = BackupMinute;
+		currentCfg.BackupSecond = BackupSecond;
+		currentCfg.BackupFrom = BackupFrom;
+		currentCfg.BackupTo = BackupTo;
+		currentCfg.UseCmd = UseCmd;
+		currentCfg.UseQQBot = UseQQBot;
+		currentCfg.QQIPAddress = QQIPAddress;
+		currentCfg.QQClientPort = QQClientPort;
+		currentCfg.QQServerPort = QQServerPort;
+		currentCfg.OwnerQQ = OwnerQQ;
+		currentCfg.QQGroup = QQGroup;
+
+		std::string value;
+		const std::string name = req_json["Name"].GetString();
+		const char type = req_json["Type"].GetString()[0];
+		if (!AppCfg::GetValueByType(currentCfg, name, type, value)) {
+			res.status = 400;
+			return res.set_content("config key/type error", "text/plain");
 		}
-		if(res.status!=114514) [[likely]] res.status=200;
+
+		res.status = 200;
+		res.set_content(value, "text/plain");
 
 	});
 
@@ -451,7 +449,7 @@ static CFGPAR::parser par;
 	});
 
 	//qq机器人主函数
-	main_qqbot(qqsvr );
+	main_qqbot(qqsvr);
 
 	//初始化游戏API
 	init_game_API(svr);
@@ -598,10 +596,17 @@ static CFGPAR::parser par;
         std::string cfgdata = args[2];
     };
 
-    // 启动输入监听线程
-    std::thread inputThread([&commandMap]() {
-        std::string line;
-        while (std::getline(std::cin, line)||1) {
+	// 启动输入监听线程
+	std::thread inputThread([&commandMap]() {
+		std::string line;
+		while (true) {
+			if (!std::getline(std::cin, line)) {
+				// Avoid high CPU usage if stdin is closed (e.g. running as service)
+				std::this_thread::sleep_for(std::chrono::seconds(1));
+				if (std::cin.eof()) continue; // Keep running if intention is to stay alive
+				std::cin.clear(); // Clear error state to retry
+				continue; 
+			}
             std::istringstream iss(line);
             std::vector<std::string> tokens;
             std::string token;

@@ -86,7 +86,7 @@
 
 6. 按照[NapCatQQ安装教程](https://napneko.icu/guide/start-install)中指示启动机器人
 
-7.  双击**NIAHttpBOT.exe**来启动，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.cfg`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)，修改后请输入`reload`来重新加载配置文件。
+7.  双击**NIAHttpBOT.exe**来启动，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.json`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)。
 
 8.  最后启动MCBDS服务端即可！
 
@@ -139,7 +139,7 @@
 
 13. 运行 `chmod +x NIAHttpBOT` 命令给文件添加执行权限
 
-然后你就可以使用 `./NIAHttpBOT` 命令来运行你的程序了，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.cfg`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)，修改后请输入`reload`来重新加载配置文件。
+然后你就可以使用 `./NIAHttpBOT` 命令来运行你的程序了，第一次启动时会生成配置文件，配置文件路径为`./NIAHttpBOT.json`，您可以根据自己的需求进行修改，具体修改教程见[配置文件](#配置文件)。
 
 14. 最后启动MCBDS服务端即可！
 
@@ -170,38 +170,41 @@ CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-424268864-5579737-879501358-
 
 ## 配置文件
 
-```cfg
-# 语言文件路径,默认为空-CN
-LanguageFile = ""
-
-# ip地址，一般为不用改
-IPAddress = "127.0.0.1"
-
-# 服务器端口，需与行为包端口以及QQ机器人作为客户端上报事件地址保持一致
-ServerPort = 10086
-
-# 功能配置:
-
-#是否启用DOS指令功能
-UseCmd = false
-
-# QQ机器人配置:
-
-# 是否启用QQ机器人,默认为true
-UseQQBot = true
-
-# 客户端端口，需要与QQ机器人作为服务器设置的监听Http端口一致
-ClientPort = 10023
-
-# 不知道啥作用的不用改
-Locate = "/qqEvent"
-
-# 主人QQ配置
-OwnerQQ = "123456789"
-
-# 监听QQ群
-QQGroup = "123456789"
-
+```json
+{
+    "base": {
+        "LanguageFile": "",
+        "IPAddress": "127.0.0.1",
+        "ServerPort": 2333,
+        "EnableWebUI": false,
+        "WebUIFile": "./WebUI",
+        "WebUIWebsitePath": "/"
+    },
+    "server": {
+        "ServerLocate": "D:/NiaServer-Core/bedrock_server.exe",
+        "AutoStartServer": false
+    },
+    "backup": {
+        "AutoBackup": false,
+        "BackupHour": 4,
+        "BackupMinute": 0,
+        "BackupSecond": 0,
+        "BackupFrom": "D:/NiaServer-Core/worlds/250117",
+        "BackupTo": "./backup"
+    },
+    "features": {
+        "UseCmd": false
+    },
+    "qqbot": {
+        "UseQQBot": false,
+        "QQIPAddress": "127.0.0.1",
+        "QQClientPort": 10023,
+        "QQServerPort": 10086,
+        "Locate": "/qq_event",
+        "OwnerQQ": "123456789",
+        "QQGroup": "123456789"
+    }
+}
 ```
 
 ***

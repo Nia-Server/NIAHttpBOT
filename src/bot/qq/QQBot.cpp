@@ -5,9 +5,8 @@
 //读取配置文件
 //CFGPAR::parser par;
 
-//获取配置文件中的Locate,OwnerQQ,QQGroup,IPAddress,QQClientPort
+//获取配置文件中的OwnerQQ,QQGroup,IPAddress,QQClientPort
 extern std::string ServerLocate;
-extern std::string Locate;
 extern bool UseQQBot;
 extern std::string OwnerQQ;
 extern std::string QQGroup;
@@ -819,9 +818,6 @@ void main_qqbot(httplib::Server &svr) {
 	//dangerous!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     qqbot = new QQBot(IPAddress, QQClientPort);
 
-
-
-
 	//尝试与QQ机器人建立连接
 	auto get_status_res = qqbot->get_status();
 	//检查是否成功连接到QQ机器人
@@ -956,7 +952,7 @@ void main_qqbot(httplib::Server &svr) {
 	});
 
 	//接收QQ消息事件
-	svr.Post(Locate, [](const httplib::Request& req, httplib::Response& res) {
+	auto qqEventHandler = [](const httplib::Request& req, httplib::Response& res) {
 
 		INFO(XX("qq客户端接收的事件数据为:") << req.body);
 		//解析字符串并创建一个json对象
@@ -1377,6 +1373,8 @@ void main_qqbot(httplib::Server &svr) {
 		}
 		res.status = 200;
 		res.set_content("success", "text/plain");
-	});
+	};
+
+	svr.Post("/", qqEventHandler);
 
 }

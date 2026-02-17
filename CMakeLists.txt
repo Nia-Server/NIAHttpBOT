@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.21)
 
 set(PROJECT NIAHttpBOT)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_BUILD_TYPE Release)
+
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
 
 project(${PROJECT})
 
@@ -42,8 +45,19 @@ if(SUPPORTS_AVX2)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${AVX2_FLAG}")
 endif()
 
-aux_source_directory(./src/ SOURCE)
-include_directories(./header)
+file(GLOB_RECURSE SOURCE CONFIGURE_DEPENDS
+	"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+include_directories(
+	./header
+	./src
+	./src/app
+	./src/common
+	./src/api/bds
+	./src/api/file
+	./src/api/game
+	./src/bot/qq
+	./src/ui
+)
 add_definitions(-D__PROJECT__="${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(${PROJECT} ${SOURCE})

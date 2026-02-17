@@ -486,10 +486,17 @@ void init_qq_API(httplib::Server &svr) {
         std::string message = send_qq_group_msg_data["message"].GetString();
 
         // Assuming there's a global QQBot instance
-        extern QQBot qqbot;
+        extern QQBot* qqbot;
+
+        if (!qqbot) {
+            WARN("QQBot instance is not initialized or useQQBot is false!");
+            res.status = 500;
+            res.set_content("QQBot not initialized", "text/plain");
+            return;
+        }
 
         // Send the message to the group
-        int result = qqbot.send_group_message(group_id, message, false);
+        int result = qqbot->send_group_message(group_id, message, false);
 
         // Log the result
         if (result > 0) {
