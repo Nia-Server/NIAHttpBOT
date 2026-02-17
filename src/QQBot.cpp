@@ -770,7 +770,7 @@ void loadForbiddenWords(const std::string& filename) {
 		std::ofstream file(filename);
 		file << "#违禁词每个词占一行，结尾可以用“，”或“；”结尾，或者直接换行\n";
 		file << "#违禁词前加“#”前缀则不会解析本行的违禁词\n";
-		file << "test\n";
+		file << "#test\n";
 		file.close();
 		//向控制台输出警告
 		WARN("违禁词文件不存在，已自动创建。请编辑违禁词文件，文件名称为：" + filename);
@@ -997,7 +997,7 @@ void main_qqbot(httplib::Server &svr) {
 				sender_nickname = qq_event_data["sender"]["card"].GetString();
 			}
 
-			INFO(sender_nickname);
+
 
 			bool is_command = false;
 			bool is_reply = false;

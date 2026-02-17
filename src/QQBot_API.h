@@ -17,6 +17,8 @@
 #include "I18Nize.hpp"
 #include "Logger.hpp"
 
+void init_qq_API(httplib::Server &svr);
+
 class QQBot {
 public:
 
