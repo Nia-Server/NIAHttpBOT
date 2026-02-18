@@ -56,6 +56,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(leveldb)
 
+if(EXISTS "${leveldb_SOURCE_DIR}/util/env_posix.cc")
+	file(READ "${leveldb_SOURCE_DIR}/util/env_posix.cc" LEVELDB_ENV_POSIX_CC)
+	string(REPLACE "std::memory_order::memory_order_relaxed" "std::memory_order_relaxed" LEVELDB_ENV_POSIX_CC "${LEVELDB_ENV_POSIX_CC}")
+	file(WRITE "${leveldb_SOURCE_DIR}/util/env_posix.cc" "${LEVELDB_ENV_POSIX_CC}")
+endif()
+
+set_property(TARGET leveldb PROPERTY CXX_STANDARD 17)
+set_property(TARGET leveldb PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET leveldb PROPERTY CXX_EXTENSIONS OFF)
+
 if(MSVC)
 	set_property(TARGET leveldb PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
