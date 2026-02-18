@@ -33,6 +33,7 @@ If you have any problems with this project, please contact the authors.
 #include <functional>
 #include <sstream>
 #include <queue>
+#include <vector>
 #include <clocale>
 
 
@@ -57,9 +58,11 @@ If you have any problems with this project, please contact the authors.
 #include "Logger.hpp"
 
 #include "QQBot.h"
+#include "QQBot_API.h"
 #include "File_API.h"
 #include "Game_API.h"
 #include "BDS_API.h"
+#include "HttpV1.hpp"
 
 
 #include "Graphics.hpp"
@@ -76,14 +79,8 @@ std::string IPAddress = "127.0.0.1";
 int ServerPort = 2333;
 int WebUIPort = 5000;
 
-std::string ServerLocate = "D:\\NiaServer-Core\\bedrock_server.exe";
-bool AutoStartServer = false;
-bool AutoBackup = false;
-int BackupHour = 4;
-int BackupMinute = 0;
-int BackupSecond = 0;
-std::string BackupFrom = "D:\\NiaServer-Core\\worlds\\250117";
-std::string BackupTo = "./backup";
+std::vector<BDSInstanceConfig> BdsInstances;
+std::string DefaultBdsInstanceId = "default";
 
 bool UseCmd = false;
 bool UseQQBot = false;
@@ -250,6 +247,10 @@ signed int main(signed int argc, char** argv) {
 
 	std::cout << "\033]0;NIAHttpBOT " << VERSION <<"\007";
 
+	std::atexit([]() {
+		StopAllServers();
+	});
+
 
 	//检测是否有其他进程正在运行&&终端关闭检测
 	#ifdef WIN32
@@ -332,14 +333,24 @@ signed int main(signed int argc, char** argv) {
 	EnableWebUI = appConfig.EnableWebUI;
 	WebUIFile = appConfig.WebUIFile;
 	WebUIWebsitePath = appConfig.WebUIWebsitePath;
-	ServerLocate = appConfig.ServerLocate;
-	AutoStartServer = appConfig.AutoStartServer;
-	AutoBackup = appConfig.AutoBackup;
-	BackupHour = appConfig.BackupHour;
-	BackupMinute = appConfig.BackupMinute;
-	BackupSecond = appConfig.BackupSecond;
-	BackupFrom = appConfig.BackupFrom;
-	BackupTo = appConfig.BackupTo;
+	DefaultBdsInstanceId = appConfig.DefaultBdsInstanceId;
+	BdsInstances.clear();
+	for (const auto& item : appConfig.BdsInstances) {
+		BDSInstanceConfig cfg;
+		cfg.Id = item.Id;
+		cfg.Name = item.Name;
+		cfg.ExecutablePath = item.ExecutablePath;
+		cfg.WorkingDirectory = item.WorkingDirectory;
+		cfg.AutoStart = item.AutoStart;
+		cfg.AutoBackup = item.AutoBackup;
+		cfg.BackupHour = item.BackupHour;
+		cfg.BackupMinute = item.BackupMinute;
+		cfg.BackupSecond = item.BackupSecond;
+		cfg.BackupFrom = item.BackupFrom;
+		cfg.BackupTo = item.BackupTo;
+		cfg.LogTag = item.LogTag;
+		BdsInstances.push_back(cfg);
+	}
 	UseCmd = appConfig.UseCmd;
 	UseQQBot = appConfig.UseQQBot;
 	QQIPAddress = appConfig.QQIPAddress;
@@ -347,6 +358,20 @@ signed int main(signed int argc, char** argv) {
 	QQServerPort = appConfig.QQServerPort;
 	OwnerQQ = appConfig.OwnerQQ;
 	QQGroup = appConfig.QQGroup;
+
+	if (BdsInstances.empty()) {
+		FAIL("BDS 实例列表为空，请检查 NIAHttpBOT.json 中 bds.Instances 配置");
+		return 1;
+	}
+
+	if (DefaultBdsInstanceId.empty()) {
+		DefaultBdsInstanceId = BdsInstances.front().Id;
+	}
+
+	if (!ConfigureBdsInstances(BdsInstances, DefaultBdsInstanceId, configError)) {
+		FAIL("初始化 BDS 实例失败: " + configError);
+		return 1;
+	}
 
 	INFO("已成功读取配置文件");
 	if (LanguageFile.empty()) INFO("已使用默认语言");
@@ -390,14 +415,23 @@ signed int main(signed int argc, char** argv) {
 		currentCfg.EnableWebUI = EnableWebUI;
 		currentCfg.WebUIFile = WebUIFile;
 		currentCfg.WebUIWebsitePath = WebUIWebsitePath;
-		currentCfg.ServerLocate = ServerLocate;
-		currentCfg.AutoStartServer = AutoStartServer;
-		currentCfg.AutoBackup = AutoBackup;
-		currentCfg.BackupHour = BackupHour;
-		currentCfg.BackupMinute = BackupMinute;
-		currentCfg.BackupSecond = BackupSecond;
-		currentCfg.BackupFrom = BackupFrom;
-		currentCfg.BackupTo = BackupTo;
+		currentCfg.DefaultBdsInstanceId = DefaultBdsInstanceId;
+		for (const auto& item : BdsInstances) {
+			AppCfg::BdsInstanceConfig cfgItem;
+			cfgItem.Id = item.Id;
+			cfgItem.Name = item.Name;
+			cfgItem.ExecutablePath = item.ExecutablePath;
+			cfgItem.WorkingDirectory = item.WorkingDirectory;
+			cfgItem.AutoStart = item.AutoStart;
+			cfgItem.AutoBackup = item.AutoBackup;
+			cfgItem.BackupHour = item.BackupHour;
+			cfgItem.BackupMinute = item.BackupMinute;
+			cfgItem.BackupSecond = item.BackupSecond;
+			cfgItem.BackupFrom = item.BackupFrom;
+			cfgItem.BackupTo = item.BackupTo;
+			cfgItem.LogTag = item.LogTag;
+			currentCfg.BdsInstances.push_back(cfgItem);
+		}
 		currentCfg.UseCmd = UseCmd;
 		currentCfg.UseQQBot = UseQQBot;
 		currentCfg.QQIPAddress = QQIPAddress;
@@ -421,13 +455,23 @@ signed int main(signed int argc, char** argv) {
 
 	//执行cmd命令
 	svr.Post("/RunCmd",  [](const httplib::Request& req, httplib::Response& res) {
+		rapidjson::Document request;
+		if (!HttpV1::ParseRequestV1(req, res, request)) {
+			return;
+		}
+
+		std::string cmd;
+		if (!HttpV1::RequireString(request, res, "cmd", cmd)) {
+			return;
+		}
+
 		//首先判断配置文件是否启用
 		if (!UseCmd) [[unlikely]] {
 			XWARN("执行DOS命令的功能暂未启用，请在启用后使用");
-			res.set_content("feature not enabled!", "text/plain");
-			return ;
+			HttpV1::RespondFail(res, 300, "NIAHttpBOT自身错误");
+			return;
 		}
-		const std::string& cmd = req.body;
+
 		WARN(XX("收到一条执行DOS命令的请求：") + cmd);
 		auto [cmdres, excd] = ([&cmd]() -> std::pair<std::string, int> {
 			int exitCode = 0;
@@ -445,11 +489,18 @@ signed int main(signed int argc, char** argv) {
 		INFO(XX("命令执行输出: ") + cmdres);
 		if (excd!=0) [[unlikely]] WARN(XXX("命令执行失败, 返回值: ")+std::to_string(excd));
 		else XINFO("命令执行成功！返回值: 0");
-		res.set_content(cmdres, "text/plain"), res.status = excd; // exitCode
+
+		rapidjson::Document dataDoc;
+		auto& allocator = dataDoc.GetAllocator();
+		rapidjson::Value data(rapidjson::kObjectType);
+		data.AddMember("output", rapidjson::Value(cmdres.c_str(), allocator), allocator);
+		data.AddMember("exit_code", excd, allocator);
+		HttpV1::RespondSuccess(res, &data);
 	});
 
 	//qq机器人主函数
 	main_qqbot(qqsvr);
+	init_qq_API(svr);
 
 	//初始化游戏API
 	init_game_API(svr);
@@ -457,8 +508,12 @@ signed int main(signed int argc, char** argv) {
 	//初始化文件API
 	init_file_API(svr);
 
-	//启动服务器
-	if (AutoStartServer) StartServer();
+	//按实例自动启动服务器
+	for (const auto& item : BdsInstances) {
+		if (item.AutoStart) {
+			StartServer(item.Id);
+		}
+	}
 
 	if(EnableWebUI | 1){
 		
@@ -477,12 +532,13 @@ signed int main(signed int argc, char** argv) {
 
     commandMap["help"] = [](const std::vector<std::string>&) {
         std::cout << "可用指令列表：" << std::endl;
-        std::cout << "  relstart - 重启程序" << std::endl;
+        std::cout << "  restart - 重启程序" << std::endl;
         std::cout << "  stop - 关闭程序" << std::endl;
-        // std::cout << "  setcfg <cfgname> <cfgdata> - 设置配置项" << std::endl;
-		std::cout << "  startserver - 启动服务器(请在正确配置配置文件后使用)" << std::endl;
-		std::cout << "  mc <command> - 向服务器发送mc指令" << std::endl;
-		std::cout << "  stopserver - 关闭服务器(请在正确配置配置文件后使用)" << std::endl;
+		std::cout << "  listserver - 列出已配置实例" << std::endl;
+		std::cout << "  use <id> - 切换默认实例" << std::endl;
+		std::cout << "  startserver <id> - 启动指定实例" << std::endl;
+		std::cout << "  mc <id> <command> - 向指定实例发送 mc 指令" << std::endl;
+		std::cout << "  stopserver <id> - 关闭指定实例" << std::endl;
     };
 
 	std::string programName = argv[0];
@@ -490,10 +546,7 @@ signed int main(signed int argc, char** argv) {
         INFO("1s后重启程序..." );
         std::this_thread::sleep_for(std::chrono::seconds(1));
         #ifdef _WIN32
-			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-				INFO("检测到服务器正在运行，发送 stop 指令...");
-				StopServer();
-			}
+			StopAllServers();
 			STARTUPINFOA si2;
 			PROCESS_INFORMATION pi2;
 			ZeroMemory(&si2, sizeof(si2));
@@ -512,76 +565,90 @@ signed int main(signed int argc, char** argv) {
         exit(0);
     };
 
-	commandMap["startserver"] = [](const std::vector<std::string>&) {
-		StartServer();
+	commandMap["listserver"] = [](const std::vector<std::string>&) {
+		auto ids = ListServerInstances();
+		INFO("当前默认实例: " + GetDefaultServerInstance());
+		for (const auto& id : ids) {
+			INFO("- " + id);
+		}
+	};
+
+	commandMap["use"] = [](const std::vector<std::string>& args) {
+		if (args.size() < 2) {
+			WARN("use 指令需要参数: <id>");
+			return;
+		}
+		if (!SetDefaultServerInstance(args[1])) {
+			WARN("切换默认实例失败，未找到实例: " + args[1]);
+			return;
+		}
+		INFO("默认实例已切换到: " + args[1]);
+	};
+
+	commandMap["startserver"] = [](const std::vector<std::string>& args) {
+		if (args.size() < 2) {
+			WARN("startserver 指令需要参数: <id>");
+			return;
+		}
+		StartServer(args[1]);
 	};
 
 	commandMap["mc"] = [](const std::vector<std::string>& args) {
-		if (args.size() < 2) {
-			WARN("命令不能为空！");
+		if (args.size() < 3) {
+			WARN("mc 指令需要参数: <id> <command>");
 			return;
 		}
-		//把mc空格后的所有指令发送
-		std::string command = args[1];
-		for (int i = 2; i < args.size(); i++) {
+		std::string instanceId = args[1];
+		std::string command = args[2];
+		for (int i = 3; i < args.size(); i++) {
 			command += " " + args[i];
 		}
-		runCommand(command);
+		std::string result = runCommand(command, instanceId);
+		INFO("[" + instanceId + "] " + result);
 	};
 
 	commandMap["whitelist"] = [](const std::vector<std::string>& args) {
-		if (args.size() < 2) {
-			WARN("whitelist指令需要一个参数: <add|remove>");
+		if (args.size() < 4) {
+			WARN("whitelist 指令格式: whitelist <id> <add|remove> <player_name>");
 			return;
 		}
-		//判断是否为add或remove
-		if (args[1] == "add") {
-			if (args.size() < 3) {
-				WARN("add指令需要一个参数: <player_name>");
-				return;
-			}
-			std::string player_name = args[2];
-			if (AddPlayerToWhitelist(player_name)) {
+		std::string instanceId = args[1];
+		if (args[2] == "add") {
+			std::string player_name = args[3];
+			if (AddPlayerToWhitelist(player_name, instanceId)) {
 				INFO("已成功添加玩家 " + player_name + " 到白名单");
 			} else {
 				WARN("添加玩家 " + player_name + " 到白名单失败");
 			}
-		} else if (args[1] == "remove") {
-			if (args.size() < 3) {
-				WARN("remove指令需要一个参数: <player_name>");
-				return;
-			}
-			std::string player_name = args[2];
-			if (RemovePlayerFromWhitelist(player_name)) {
+		} else if (args[2] == "remove") {
+			std::string player_name = args[3];
+			if (RemovePlayerFromWhitelist(player_name, instanceId)) {
 				INFO("已成功从白名单中移除玩家 " + player_name);
 			} else {
 				WARN("从白名单中移除玩家 " + player_name + " 失败");
 			}
 		} else {
-			WARN("未知指令: " + args[1] + "，输入 help 查看帮助");
+			WARN("未知子命令: " + args[2] + "，可选 add/remove");
 		}
 	};
 
 
 	//关闭程序,向bedrock_server.exe中发送stop
-	commandMap["stopserver"] = [](const std::vector<std::string>&) {
-		StopServer();
+	commandMap["stopserver"] = [](const std::vector<std::string>& args) {
+		if (args.size() < 2) {
+			WARN("stopserver 指令需要参数: <id>");
+			return;
+		}
+		StopServer(args[1]);
 	};
 
     commandMap["stop"] = [](const std::vector<std::string>&) {
         INFO("1s后将关闭程序...");
+        StopAllServers();
         #ifdef _WIN32
-			// 检查 bedrock_server.exe 是否在运行
-			if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-				INFO("检测到服务器正在运行，发送 stop 指令...");
-				StopServer();
-			} else {
-				INFO("服务器未运行，直接关闭程序...");
-			}
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			exit(0);
 		#else
-		//linux下直接关闭程序
 		std::this_thread::sleep_for(std::chrono::seconds(1));
         exit(0);
 		#endif
@@ -617,12 +684,16 @@ signed int main(signed int argc, char** argv) {
                 continue;
             }
 			if (tokens[0][0] == '/') {
-				tokens[0] = tokens[0].substr(1);
-				std::string command = tokens[0];
-				for (int i = 1; i < tokens.size(); i++) {
+				if (tokens.size() < 2) {
+					WARN("斜杠命令格式: /<实例ID> <command>");
+					continue;
+				}
+				std::string instanceId = tokens[0].substr(1);
+				std::string command = tokens[1];
+				for (int i = 2; i < tokens.size(); i++) {
 					command += " " + tokens[i];
 				}
-				runCommand(command);
+				runCommand(command, instanceId);
 				continue;
 			}
             auto it = commandMap.find(tokens[0]);

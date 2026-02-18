@@ -1,5 +1,7 @@
 #include "QQBot_API.h"
 
+#include "HttpV1.hpp"
+
 QQBot::QQBot(const std::string& IPAddress, int QQClientPort)
     {
     
@@ -458,40 +460,26 @@ QQBot::group_member_info QQBot::get_group_member_info(const std::string & group_
 void init_qq_API(httplib::Server &svr) {
 
     //发送qq消息
-	svr.Post("/SendGroupMsg", [](const httplib::Request& req, httplib::Response& res) {
+	svr.Post("/SendQQGroupMessage", [](const httplib::Request& req, httplib::Response& res) {
 		INFO("[HttpRequest] 接收到发送群消息请求");
-		//解析字符串并创建一个json对象
-        rapidjson::Document send_qq_group_msg_data;
-        send_qq_group_msg_data.Parse(req.body.c_str());
-        //判断是否解析成功
-        if (send_qq_group_msg_data.HasParseError()) {
-            res.status = 400;
-            res.set_content("Data parsing failed", "text/plain");
-            return;
-        }
-        //判断是否包含必要的键
-        if (!send_qq_group_msg_data.HasMember("group_id")) {
-            res.status = 400;
-            res.set_content("The group_id key for the json object was not found! Please recheck and send again.", "text/plain");
-            return;
-        }
-        if (!send_qq_group_msg_data.HasMember("message")) {
-            res.status = 400;
-            res.set_content("The message key for the json object was not found! Please recheck and send again.", "text/plain");
-            return;
-        }
-        //获取群号
-        std::string group_id = send_qq_group_msg_data["group_id"].GetString();
-        //获取消息内容
-        std::string message = send_qq_group_msg_data["message"].GetString();
+
+		rapidjson::Document request;
+		if (!HttpV1::ParseRequestV1(req, res, request)) {
+			return;
+		}
+
+		std::string group_id;
+		std::string message;
+		if (!HttpV1::RequireString(request, res, "group_id", group_id) || !HttpV1::RequireString(request, res, "message", message)) {
+			return;
+		}
 
         // Assuming there's a global QQBot instance
         extern QQBot* qqbot;
 
         if (!qqbot) {
             WARN("QQBot instance is not initialized or useQQBot is false!");
-            res.status = 500;
-            res.set_content("QQBot not initialized", "text/plain");
+            HttpV1::RespondFail(res, 500, "没有成功链接到qq机器人");
             return;
         }
 
@@ -501,17 +489,19 @@ void init_qq_API(httplib::Server &svr) {
         // Log the result
         if (result > 0) {
             INFO("Successfully sent message to group " + group_id + " with message_id: " + std::to_string(result));
+            rapidjson::Document dataDoc;
+            auto& allocator = dataDoc.GetAllocator();
+            rapidjson::Value data(rapidjson::kObjectType);
+            data.AddMember("message_id", result, allocator);
+            HttpV1::RespondSuccess(res, &data);
         } else {
             WARN("Failed to send message to group " + group_id + ". Error code: " + std::to_string(result));
+            if (result == -2) {
+                HttpV1::RespondFail(res, 501, "目标qq群不存在");
+                return;
+            }
+            HttpV1::RespondFail(res, 502, "qq群消息发送失败");
         }
-
-        // Set file variable to indicate success/failure
-        std::ofstream file("message_log.txt", std::ios::app);
-        file << "Sent message to group " << group_id << ": " << message << " (Result: " << result << ")" << std::endl;
-
-		res.status = 200;
-		res.set_content(file?"true":"false", "text/plain");
-		file.close();
 	});
 
 }

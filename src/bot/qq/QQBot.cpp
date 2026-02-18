@@ -6,7 +6,6 @@
 //CFGPAR::parser par;
 
 //获取配置文件中的OwnerQQ,QQGroup,IPAddress,QQClientPort
-extern std::string ServerLocate;
 extern bool UseQQBot;
 extern std::string OwnerQQ;
 extern std::string QQGroup;
@@ -64,7 +63,10 @@ void showHelpMenu(const command_addition_info& info, const std::vector<std::stri
     helpMenu += "#封禁 @要封禁的人 <时间>: 封禁指定群成员游戏账号\n";
     helpMenu += "例：#封禁 @NIANIANKNIA 1d\n";
     helpMenu += "#解封 @要解封的人: 解封指定群成员账号\n";
-    helpMenu += "#改权限 @要改权限的人 <权限>: 改变指定群成员的权限";
+	helpMenu += "#改权限 @要改权限的人 <权限>: 改变指定群成员的权限\n";
+	helpMenu += "#开服 <实例ID>: 启动指定 BDS 实例\n";
+	helpMenu += "#关服 <实例ID>: 关闭指定 BDS 实例\n";
+	helpMenu += "#cmd <实例ID> <命令>: 向指定实例发送命令";
     qqbot->send_group_message(info.group_id, helpMenu);
 }
 
@@ -617,11 +619,16 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
 		return ;
 	}
+	if (args.size() < 1) {
+		qqbot->send_group_message(info.group_id, "开服指令格式错误，格式: #开服 <实例ID>");
+		return;
+	}
+	std::string instanceId = args[0];
 	#ifdef _WIN32
-		if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-			qqbot->send_group_message(info.group_id, "服务器已经在运行中，无需重新启动！");
+		if (StartServer(instanceId)) {
+			qqbot->send_group_message(info.group_id, "实例 " + instanceId + " 启动成功");
 		} else {
-			StartServer();
+			qqbot->send_group_message(info.group_id, "实例 " + instanceId + " 启动失败");
 		}
 	#else
 		qqbot->send_group_message(info.group_id, "该功能暂不支持Linux系统！");
@@ -630,26 +637,29 @@ void startServer(const command_addition_info& info, const std::vector<std::strin
 
 //执行BDS服务器命令
 void executeServerCommand(const command_addition_info& info, const std::vector<std::string>& args) {
+	if (args.size() < 2) {
+		qqbot->send_group_message(info.group_id, "执行命令格式错误，格式: #cmd <实例ID> <命令>");
+		return;
+	}
+	std::string instanceId = args[0];
+	std::vector<std::string> commandArgs(args.begin() + 1, args.end());
+
 	//先定义一个命令白名单
 	std::vector<std::string> command_whitelist = {"list"};
 	//先判断指令是否为白名单指令，如果是则直接执行
-	if (std::find(command_whitelist.begin(), command_whitelist.end(), args[0]) != command_whitelist.end()) {
+	if (std::find(command_whitelist.begin(), command_whitelist.end(), commandArgs[0]) != command_whitelist.end()) {
 		#ifdef _WIN32
-		if (args.size() < 1) {
-			qqbot->send_group_message(info.group_id, "执行命令指令格式错误，执行命令格式为:#cmd <命令> 或/<命令>");
-			return;
-		}
 		//把args中的参数拼接成一个完整的命令
-		std::string command = args[0];
-		for (int i = 1; i < args.size(); i++) {
-			command += " " + args[i];
+		std::string command = commandArgs[0];
+		for (int i = 1; i < commandArgs.size(); i++) {
+			command += " " + commandArgs[i];
 		}
 		//删去命令中的换行符并赋值给std_command
 		std::string std_command = command;
 		std_command.erase(std::remove(std_command.begin(), std_command.end(), '\n'), std_command.end());
 		qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + std_command);
 		//输出命令
-		std::string cmd_result = runCommand(command);
+		std::string cmd_result = runCommand(command, instanceId);
 		//输出结果
 		qqbot->send_group_message(info.group_id, cmd_result);
 		return ;
@@ -665,21 +675,17 @@ void executeServerCommand(const command_addition_info& info, const std::vector<s
 		return ;
 	}
 	#ifdef _WIN32
-		if (args.size() < 1) {
-			qqbot->send_group_message(info.group_id, "执行命令指令格式错误，执行命令格式为:#cmd <命令> 或/<命令>");
-			return;
-		}
 		//把args中的参数拼接成一个完整的命令
-		std::string command = args[0];
-		for (int i = 1; i < args.size(); i++) {
-			command += " " + args[i];
+		std::string command = commandArgs[0];
+		for (int i = 1; i < commandArgs.size(); i++) {
+			command += " " + commandArgs[i];
 		}
 		//删去命令中的换行符并赋值给std_command
 		std::string std_command = command;
 		std_command.erase(std::remove(std_command.begin(), std_command.end(), '\n'), std_command.end());
 		qqbot->send_group_message(info.group_id, "已成功向服务器发送命令：" + std_command);
 		//输出命令
-		std::string cmd_result = runCommand(command);
+		std::string cmd_result = runCommand(command, instanceId);
 		//输出结果
 		qqbot->send_group_message(info.group_id, cmd_result);
 	#else
@@ -731,12 +737,17 @@ void stopServer(const command_addition_info& info, const std::vector<std::string
 		qqbot->send_group_message(info.group_id, "您没有权限执行此操作！");
 		return ;
 	}
-	qqbot->send_group_message(info.group_id, "已成功向服务器发送stop命令！");
-	bool result = StopServer();
+	if (args.size() < 1) {
+		qqbot->send_group_message(info.group_id, "关服指令格式错误，格式: #关服 <实例ID>");
+		return;
+	}
+	std::string instanceId = args[0];
+	qqbot->send_group_message(info.group_id, "已向实例 " + instanceId + " 发送 stop 命令");
+	bool result = StopServer(instanceId);
 	if (result) {
-		qqbot->send_group_message(info.group_id, "服务器已成功关闭！");
+		qqbot->send_group_message(info.group_id, "实例 " + instanceId + " 已成功关闭！");
 	} else {
-		qqbot->send_group_message(info.group_id, "服务器关闭失败，请手动关闭服务器！");
+		qqbot->send_group_message(info.group_id, "实例 " + instanceId + " 关闭失败，请手动检查！");
 	}
 }
 

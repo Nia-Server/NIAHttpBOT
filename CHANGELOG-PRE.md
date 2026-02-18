@@ -1,6 +1,6 @@
-# v1.0.0-pre-4 更新日志
+# v1.1.0-pre-1 更新日志
 
-[![NIAHttpBOT-VERSION](https://img.shields.io/badge/NIAHttpBOT-v1.0.0-orange?style=for-the-badge&logo=appveyor)](https://github.com/Nia-Server/NIAHttpBOT/) [![NapCatQQ-VERSION](https://img.shields.io/badge/NapCatQQ-v4.3.3-green?style=for-the-badge&logo=appveyor)](https://github.com/NapNeko/NapCatQQ/releases/tag/v4.3.3)
+[![NIAHttpBOT-VERSION](https://img.shields.io/badge/NIAHttpBOT-v1.1.0-orange?style=for-the-badge&logo=appveyor)](https://github.com/Nia-Server/NIAHttpBOT/)[![API-VERSION](https://img.shields.io/badge/API-v1.0-orange?style=for-the-badge&logo=appveyor)](https://github.com/Nia-Server/NIAHttpBOT/) [![NapCatQQ-VERSION](https://img.shields.io/badge/NapCatQQ-v4.17.10-green?style=for-the-badge&logo=appveyor)](https://github.com/NapNeko/NapCatQQ/releases/tag/v4.4.17.10)
 
 > 本项目为 [NiaServer-Core](https://github.com/Nia-Server/NiaServer-Core) 的子项目。
 

@@ -2,8 +2,26 @@
 #define APP_CONFIG_HPP
 
 #include <string>
+#include <vector>
 
 namespace AppCfg {
+
+struct BdsInstanceConfig {
+    std::string Id = "default";
+    std::string Name = "Default";
+    std::string ExecutablePath = "D:/NiaServer-Core/bedrock_server.exe";
+    std::string WorkingDirectory = "D:/NiaServer-Core";
+    bool AutoStart = false;
+
+    bool AutoBackup = false;
+    int BackupHour = 4;
+    int BackupMinute = 0;
+    int BackupSecond = 0;
+    std::string BackupFrom = "D:/NiaServer-Core/worlds/250117";
+    std::string BackupTo = "./backup/default";
+
+    std::string LogTag = "default";
+};
 
 struct Config {
     std::string LanguageFile = "";
@@ -14,15 +32,8 @@ struct Config {
     std::string WebUIFile = "./WebUI";
     std::string WebUIWebsitePath = "/";
 
-    std::string ServerLocate = "D:/NiaServer-Core/bedrock_server.exe";
-    bool AutoStartServer = false;
-
-    bool AutoBackup = false;
-    int BackupHour = 4;
-    int BackupMinute = 0;
-    int BackupSecond = 0;
-    std::string BackupFrom = "D:/NiaServer-Core/worlds/250117";
-    std::string BackupTo = "./backup";
+    std::string DefaultBdsInstanceId = "default";
+    std::vector<BdsInstanceConfig> BdsInstances { BdsInstanceConfig{} };
 
     bool UseCmd = false;
 

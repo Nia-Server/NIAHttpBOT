@@ -1,6 +1,7 @@
 #include "AppConfig.hpp"
 
 #include <fstream>
+#include <unordered_set>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -90,6 +91,36 @@ static bool SetIntIfExists(const rapidjson::Value* obj, const char* key, int& ta
     return true;
 }
 
+static bool ParseInstanceObject(const rapidjson::Value& instanceObj, BdsInstanceConfig& instance, std::string& error) {
+    if (!instanceObj.IsObject()) {
+        error = "字段 Instances[] 的元素必须是对象";
+        return false;
+    }
+
+    if (!SetStringIfExists(&instanceObj, "Id", instance.Id, error)) return false;
+    if (!SetStringIfExists(&instanceObj, "Name", instance.Name, error)) return false;
+    if (!SetStringIfExists(&instanceObj, "ExecutablePath", instance.ExecutablePath, error)) return false;
+    if (!SetStringIfExists(&instanceObj, "WorkingDirectory", instance.WorkingDirectory, error)) return false;
+    if (!SetBoolIfExists(&instanceObj, "AutoStart", instance.AutoStart, error)) return false;
+    if (!SetBoolIfExists(&instanceObj, "AutoBackup", instance.AutoBackup, error)) return false;
+    if (!SetIntIfExists(&instanceObj, "BackupHour", instance.BackupHour, error)) return false;
+    if (!SetIntIfExists(&instanceObj, "BackupMinute", instance.BackupMinute, error)) return false;
+    if (!SetIntIfExists(&instanceObj, "BackupSecond", instance.BackupSecond, error)) return false;
+    if (!SetStringIfExists(&instanceObj, "BackupFrom", instance.BackupFrom, error)) return false;
+    if (!SetStringIfExists(&instanceObj, "BackupTo", instance.BackupTo, error)) return false;
+    if (!SetStringIfExists(&instanceObj, "LogTag", instance.LogTag, error)) return false;
+
+    if (instance.Id.empty()) {
+        error = "字段 Instances[].Id 不能为空";
+        return false;
+    }
+    if (instance.ExecutablePath.empty()) {
+        error = "字段 Instances[].ExecutablePath 不能为空";
+        return false;
+    }
+    return true;
+}
+
 bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) {
     rapidjson::Document doc;
     if (!ReadJsonFile(path, doc, error)) return false;
@@ -101,12 +132,14 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
     const rapidjson::Value* backup = nullptr;
     const rapidjson::Value* features = nullptr;
     const rapidjson::Value* qqbot = nullptr;
+    const rapidjson::Value* bds = nullptr;
 
     if (!GetObj(doc, "base", base, error)) return false;
     if (!GetObj(doc, "server", server, error)) return false;
     if (!GetObj(doc, "backup", backup, error)) return false;
     if (!GetObj(doc, "features", features, error)) return false;
     if (!GetObj(doc, "qqbot", qqbot, error)) return false;
+    if (!GetObj(doc, "bds", bds, error)) return false;
 
     if (!SetStringIfExists(base, "LanguageFile", loaded.LanguageFile, error)) return false;
     if (!SetStringIfExists(base, "IPAddress", loaded.IPAddress, error)) return false;
@@ -114,16 +147,6 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
     if (!SetBoolIfExists(base, "EnableWebUI", loaded.EnableWebUI, error)) return false;
     if (!SetStringIfExists(base, "WebUIFile", loaded.WebUIFile, error)) return false;
     if (!SetStringIfExists(base, "WebUIWebsitePath", loaded.WebUIWebsitePath, error)) return false;
-
-    if (!SetStringIfExists(server, "ServerLocate", loaded.ServerLocate, error)) return false;
-    if (!SetBoolIfExists(server, "AutoStartServer", loaded.AutoStartServer, error)) return false;
-
-    if (!SetBoolIfExists(backup, "AutoBackup", loaded.AutoBackup, error)) return false;
-    if (!SetIntIfExists(backup, "BackupHour", loaded.BackupHour, error)) return false;
-    if (!SetIntIfExists(backup, "BackupMinute", loaded.BackupMinute, error)) return false;
-    if (!SetIntIfExists(backup, "BackupSecond", loaded.BackupSecond, error)) return false;
-    if (!SetStringIfExists(backup, "BackupFrom", loaded.BackupFrom, error)) return false;
-    if (!SetStringIfExists(backup, "BackupTo", loaded.BackupTo, error)) return false;
 
     if (!SetBoolIfExists(features, "UseCmd", loaded.UseCmd, error)) return false;
 
@@ -133,6 +156,37 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
     if (!SetIntIfExists(qqbot, "QQServerPort", loaded.QQServerPort, error)) return false;
     if (!SetStringIfExists(qqbot, "OwnerQQ", loaded.OwnerQQ, error)) return false;
     if (!SetStringIfExists(qqbot, "QQGroup", loaded.QQGroup, error)) return false;
+
+    if (bds) {
+        if (!SetStringIfExists(bds, "DefaultInstanceId", loaded.DefaultBdsInstanceId, error)) return false;
+        if (bds->HasMember("Instances")) {
+            const rapidjson::Value& arr = (*bds)["Instances"];
+            if (!arr.IsArray()) {
+                error = "字段 bds.Instances 必须是数组";
+                return false;
+            }
+            loaded.BdsInstances.clear();
+            std::unordered_set<std::string> seen;
+            for (rapidjson::SizeType i = 0; i < arr.Size(); ++i) {
+                BdsInstanceConfig item;
+                if (!ParseInstanceObject(arr[i], item, error)) return false;
+                if (!seen.insert(item.Id).second) {
+                    error = "字段 bds.Instances 存在重复 Id: " + item.Id;
+                    return false;
+                }
+                loaded.BdsInstances.push_back(item);
+            }
+        }
+    }
+
+    if (loaded.BdsInstances.empty()) {
+        error = "bds.Instances 不能为空";
+        return false;
+    }
+
+    if (loaded.DefaultBdsInstanceId.empty()) {
+        loaded.DefaultBdsInstanceId = loaded.BdsInstances.front().Id;
+    }
 
     cfg = loaded;
     return true;
@@ -159,17 +213,9 @@ bool SaveToJsonFile(const std::string& path, const Config& cfg, std::string& err
     doc.AddMember("base", base, alloc);
 
     rapidjson::Value server(rapidjson::kObjectType);
-    server.AddMember("ServerLocate", rapidjson::Value(cfg.ServerLocate.c_str(), alloc), alloc);
-    server.AddMember("AutoStartServer", cfg.AutoStartServer, alloc);
     doc.AddMember("server", server, alloc);
 
     rapidjson::Value backup(rapidjson::kObjectType);
-    backup.AddMember("AutoBackup", cfg.AutoBackup, alloc);
-    backup.AddMember("BackupHour", cfg.BackupHour, alloc);
-    backup.AddMember("BackupMinute", cfg.BackupMinute, alloc);
-    backup.AddMember("BackupSecond", cfg.BackupSecond, alloc);
-    backup.AddMember("BackupFrom", rapidjson::Value(cfg.BackupFrom.c_str(), alloc), alloc);
-    backup.AddMember("BackupTo", rapidjson::Value(cfg.BackupTo.c_str(), alloc), alloc);
     doc.AddMember("backup", backup, alloc);
 
     rapidjson::Value features(rapidjson::kObjectType);
@@ -185,6 +231,28 @@ bool SaveToJsonFile(const std::string& path, const Config& cfg, std::string& err
     qqbot.AddMember("QQGroup", rapidjson::Value(cfg.QQGroup.c_str(), alloc), alloc);
     doc.AddMember("qqbot", qqbot, alloc);
 
+    rapidjson::Value bds(rapidjson::kObjectType);
+    bds.AddMember("DefaultInstanceId", rapidjson::Value(cfg.DefaultBdsInstanceId.c_str(), alloc), alloc);
+    rapidjson::Value instances(rapidjson::kArrayType);
+    for (const auto& item : cfg.BdsInstances) {
+        rapidjson::Value instance(rapidjson::kObjectType);
+        instance.AddMember("Id", rapidjson::Value(item.Id.c_str(), alloc), alloc);
+        instance.AddMember("Name", rapidjson::Value(item.Name.c_str(), alloc), alloc);
+        instance.AddMember("ExecutablePath", rapidjson::Value(item.ExecutablePath.c_str(), alloc), alloc);
+        instance.AddMember("WorkingDirectory", rapidjson::Value(item.WorkingDirectory.c_str(), alloc), alloc);
+        instance.AddMember("AutoStart", item.AutoStart, alloc);
+        instance.AddMember("AutoBackup", item.AutoBackup, alloc);
+        instance.AddMember("BackupHour", item.BackupHour, alloc);
+        instance.AddMember("BackupMinute", item.BackupMinute, alloc);
+        instance.AddMember("BackupSecond", item.BackupSecond, alloc);
+        instance.AddMember("BackupFrom", rapidjson::Value(item.BackupFrom.c_str(), alloc), alloc);
+        instance.AddMember("BackupTo", rapidjson::Value(item.BackupTo.c_str(), alloc), alloc);
+        instance.AddMember("LogTag", rapidjson::Value(item.LogTag.c_str(), alloc), alloc);
+        instances.PushBack(instance, alloc);
+    }
+    bds.AddMember("Instances", instances, alloc);
+    doc.AddMember("bds", bds, alloc);
+
     rapidjson::OStreamWrapper osw(out);
     rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer(osw);
     writer.SetIndent(' ', 2);
@@ -198,8 +266,6 @@ bool GetValueByType(const Config& cfg, const std::string& name, char type, std::
         case 'B': {
             bool value;
             if (name == "EnableWebUI") value = cfg.EnableWebUI;
-            else if (name == "AutoStartServer") value = cfg.AutoStartServer;
-            else if (name == "AutoBackup") value = cfg.AutoBackup;
             else if (name == "UseCmd") value = cfg.UseCmd;
             else if (name == "UseQQBot") value = cfg.UseQQBot;
             else return false;
@@ -209,9 +275,6 @@ bool GetValueByType(const Config& cfg, const std::string& name, char type, std::
         case 'I': {
             int value;
             if (name == "ServerPort") value = cfg.ServerPort;
-            else if (name == "BackupHour") value = cfg.BackupHour;
-            else if (name == "BackupMinute") value = cfg.BackupMinute;
-            else if (name == "BackupSecond") value = cfg.BackupSecond;
             else if (name == "QQClientPort") value = cfg.QQClientPort;
             else if (name == "QQServerPort") value = cfg.QQServerPort;
             else return false;
@@ -223,9 +286,6 @@ bool GetValueByType(const Config& cfg, const std::string& name, char type, std::
             else if (name == "IPAddress") out = cfg.IPAddress;
             else if (name == "WebUIFile") out = cfg.WebUIFile;
             else if (name == "WebUIWebsitePath") out = cfg.WebUIWebsitePath;
-            else if (name == "ServerLocate") out = cfg.ServerLocate;
-            else if (name == "BackupFrom") out = cfg.BackupFrom;
-            else if (name == "BackupTo") out = cfg.BackupTo;
             else if (name == "QQIPAddress") out = cfg.QQIPAddress;
             else if (name == "OwnerQQ") out = cfg.OwnerQQ;
             else if (name == "QQGroup") out = cfg.QQGroup;

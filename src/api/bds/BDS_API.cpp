@@ -1,391 +1,500 @@
 #include "BDS_API.h"
 
-extern int BackupHour;
-extern int BackupMinute;
-extern int BackupSecond;
-extern std::string BackupFrom;
-extern std::string BackupTo;
-
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <cctype>
+#include <filesystem>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <regex>
+#include <unordered_map>
 
 #ifdef WIN32
-STARTUPINFO si;
-PROCESS_INFORMATION pi;
-SECURITY_ATTRIBUTES sa;
-HANDLE g_hChildStd_IN_Wr = NULL;
-HANDLE g_hChildStd_IN_Rd = NULL;
-HANDLE g_hChildStd_OUT_Rd = NULL;
-HANDLE g_hChildStd_OUT_Wr = NULL;
-bool isCommand = false;
-std::queue<std::string> g_McOutputQueue;
-std::mutex g_McOutputMutex;
-std::condition_variable g_McOutputCV;
-bool g_McOutputReady = false;
+
+namespace {
+
+struct InstanceRuntime {
+    BDSInstanceConfig cfg;
+
+    STARTUPINFOA si{};
+    PROCESS_INFORMATION pi{};
+    SECURITY_ATTRIBUTES sa{};
+
+    HANDLE stdinWrite = NULL;
+    HANDLE stdinRead = NULL;
+    HANDLE stdoutRead = NULL;
+    HANDLE stdoutWrite = NULL;
+
+    std::mutex outputMutex;
+    std::condition_variable outputCv;
+    std::queue<std::string> outputQueue;
+    bool outputReady = false;
+
+    std::atomic<bool> running{false};
+};
+
+std::unordered_map<std::string, std::unique_ptr<InstanceRuntime>> g_instances;
+std::mutex g_instancesMutex;
+std::string g_defaultInstanceId;
+
+std::string ResolveInstanceId(const std::string& input) {
+    if (!input.empty()) {
+        return input;
+    }
+    return g_defaultInstanceId;
+}
+
+InstanceRuntime* GetRuntimeUnsafe(const std::string& id) {
+    auto it = g_instances.find(id);
+    if (it == g_instances.end()) {
+        return nullptr;
+    }
+    return it->second.get();
+}
+
+bool IsProcessAlive(const InstanceRuntime& runtime) {
+    if (!runtime.running.load()) {
+        return false;
+    }
+    if (runtime.pi.hProcess == NULL) {
+        return false;
+    }
+    DWORD waitRes = WaitForSingleObject(runtime.pi.hProcess, 0);
+    return waitRes == WAIT_TIMEOUT;
+}
+
+void CleanupHandles(InstanceRuntime& runtime) {
+    if (runtime.pi.hProcess != NULL) {
+        CloseHandle(runtime.pi.hProcess);
+        runtime.pi.hProcess = NULL;
+    }
+    if (runtime.pi.hThread != NULL) {
+        CloseHandle(runtime.pi.hThread);
+        runtime.pi.hThread = NULL;
+    }
+    if (runtime.stdinWrite != NULL) {
+        CloseHandle(runtime.stdinWrite);
+        runtime.stdinWrite = NULL;
+    }
+    if (runtime.stdinRead != NULL) {
+        CloseHandle(runtime.stdinRead);
+        runtime.stdinRead = NULL;
+    }
+    if (runtime.stdoutWrite != NULL) {
+        CloseHandle(runtime.stdoutWrite);
+        runtime.stdoutWrite = NULL;
+    }
+    if (runtime.stdoutRead != NULL) {
+        CloseHandle(runtime.stdoutRead);
+        runtime.stdoutRead = NULL;
+    }
+}
+
+std::string TrimLine(std::string value) {
+    while (!value.empty() && (value.back() == '\n' || value.back() == '\r')) {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::string TrimRightSpace(std::string value) {
+    auto isSpace = [](unsigned char ch) {
+        return std::isspace(ch) != 0;
+    };
+
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.back()))) {
+        value.pop_back();
+    }
+    return value;
+}
+
+std::string NormalizeBdsLine(const std::string& input) {
+    static const std::regex kNoLogPrefix(R"(^NO LOG FILE!\s*-\s*)");
+    static const std::regex kNestedTimestamp(R"(^\[\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?::\d{3})?\s+[A-Z]+\]\s*)");
+    static const std::regex kScriptingTag(R"(\[Scripting\]\s*)");
+
+    std::string line = TrimRightSpace(input);
+    if (line.empty()) {
+        return line;
+    }
+
+    line = std::regex_replace(line, kNoLogPrefix, "");
+    line = std::regex_replace(line, kNestedTimestamp, "");
+    line = std::regex_replace(line, kScriptingTag, "");
+    return TrimRightSpace(line);
+}
+
+std::string BuildBdsLogPrefix(const InstanceRuntime& runtime) {
+    const std::string& tag = runtime.cfg.LogTag.empty() ? runtime.cfg.Id : runtime.cfg.LogTag;
+    return "[BDS/" + tag + "] ";
+}
+
+void ReaderThread(InstanceRuntime* runtime) {
+    char buffer[1024];
+    DWORD bytesRead = 0;
+    std::string remain;
+
+    while (ReadFile(runtime->stdoutRead, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0) {
+        remain.append(buffer, bytesRead);
+
+        std::size_t pos = 0;
+        while ((pos = remain.find('\n')) != std::string::npos) {
+            std::string line = TrimLine(remain.substr(0, pos + 1));
+            remain.erase(0, pos + 1);
+            line = NormalizeBdsLine(line);
+
+            if (!line.empty()) {
+                INFO(BuildBdsLogPrefix(*runtime) + line);
+                std::lock_guard<std::mutex> lock(runtime->outputMutex);
+                runtime->outputQueue.push(line);
+                runtime->outputReady = true;
+                runtime->outputCv.notify_all();
+            }
+        }
+    }
+
+    if (!remain.empty()) {
+        std::string line = TrimLine(remain);
+        line = NormalizeBdsLine(line);
+        if (!line.empty()) {
+            INFO(BuildBdsLogPrefix(*runtime) + line);
+            std::lock_guard<std::mutex> lock(runtime->outputMutex);
+            runtime->outputQueue.push(line);
+            runtime->outputReady = true;
+            runtime->outputCv.notify_all();
+        }
+    }
+
+    runtime->running.store(false);
+}
+
+bool StartServerInternal(InstanceRuntime& runtime) {
+    if (IsProcessAlive(runtime)) {
+        INFO("实例 " + runtime.cfg.Id + " 已在运行");
+        return true;
+    }
+
+    ZeroMemory(&runtime.si, sizeof(runtime.si));
+    runtime.si.cb = sizeof(runtime.si);
+    ZeroMemory(&runtime.pi, sizeof(runtime.pi));
+
+    runtime.sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    runtime.sa.bInheritHandle = TRUE;
+    runtime.sa.lpSecurityDescriptor = NULL;
+
+    if (!CreatePipe(&runtime.stdinRead, &runtime.stdinWrite, &runtime.sa, 0)) {
+        WARN("实例 " + runtime.cfg.Id + " 创建输入管道失败");
+        return false;
+    }
+    if (!SetHandleInformation(runtime.stdinWrite, HANDLE_FLAG_INHERIT, 0)) {
+        WARN("实例 " + runtime.cfg.Id + " 设置输入管道句柄失败");
+        CleanupHandles(runtime);
+        return false;
+    }
+
+    if (!CreatePipe(&runtime.stdoutRead, &runtime.stdoutWrite, &runtime.sa, 0)) {
+        WARN("实例 " + runtime.cfg.Id + " 创建输出管道失败");
+        CleanupHandles(runtime);
+        return false;
+    }
+    if (!SetHandleInformation(runtime.stdoutRead, HANDLE_FLAG_INHERIT, 0)) {
+        WARN("实例 " + runtime.cfg.Id + " 设置输出管道句柄失败");
+        CleanupHandles(runtime);
+        return false;
+    }
+
+    runtime.si.hStdError = runtime.stdoutWrite;
+    runtime.si.hStdOutput = runtime.stdoutWrite;
+    runtime.si.hStdInput = runtime.stdinRead;
+    runtime.si.dwFlags |= STARTF_USESTDHANDLES;
+
+    std::string commandLine = "\"" + runtime.cfg.ExecutablePath + "\"";
+    std::vector<char> cmdline(commandLine.begin(), commandLine.end());
+    cmdline.push_back('\0');
+
+    const char* workingDir = runtime.cfg.WorkingDirectory.empty() ? nullptr : runtime.cfg.WorkingDirectory.c_str();
+
+    if (!CreateProcessA(
+        nullptr,
+        cmdline.data(),
+        nullptr,
+        nullptr,
+        TRUE,
+        0,
+        nullptr,
+        workingDir,
+        &runtime.si,
+        &runtime.pi)) {
+        WARN("实例 " + runtime.cfg.Id + " 启动失败，错误码: " + std::to_string(GetLastError()));
+        CleanupHandles(runtime);
+        return false;
+    }
+
+    if (runtime.stdinRead != NULL) {
+        CloseHandle(runtime.stdinRead);
+        runtime.stdinRead = NULL;
+    }
+    if (runtime.stdoutWrite != NULL) {
+        CloseHandle(runtime.stdoutWrite);
+        runtime.stdoutWrite = NULL;
+    }
+
+    runtime.running.store(true);
+    std::thread(ReaderThread, &runtime).detach();
+    INFO("实例 " + runtime.cfg.Id + " 启动成功");
+    return true;
+}
+
+bool StopServerInternal(InstanceRuntime& runtime) {
+    if (!IsProcessAlive(runtime)) {
+        INFO("实例 " + runtime.cfg.Id + " 未运行");
+        CleanupHandles(runtime);
+        runtime.running.store(false);
+        return true;
+    }
+
+    const std::string stopCommand = "stop\n";
+    DWORD written = 0;
+    if (runtime.stdinWrite == NULL || !WriteFile(runtime.stdinWrite, stopCommand.c_str(), static_cast<DWORD>(stopCommand.size()), &written, NULL)) {
+        WARN("实例 " + runtime.cfg.Id + " 发送 stop 失败，错误码: " + std::to_string(GetLastError()));
+    }
+
+    DWORD waitRes = WaitForSingleObject(runtime.pi.hProcess, 30000);
+    if (waitRes == WAIT_TIMEOUT) {
+        WARN("实例 " + runtime.cfg.Id + " 在 30 秒内未退出，尝试强制结束");
+        TerminateProcess(runtime.pi.hProcess, 1);
+        WaitForSingleObject(runtime.pi.hProcess, 5000);
+    }
+
+    CleanupHandles(runtime);
+    runtime.running.store(false);
+    INFO("实例 " + runtime.cfg.Id + " 已关闭");
+    return true;
+}
+
+} // namespace
 
 BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
     switch (dwCtrlType) {
+        case CTRL_C_EVENT:
+        case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
-            // 检查 bedrock_server.exe 是否在运行
-            if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-                INFO("检测到 bedrock_server.exe 正在运行，发送 stop 指令...");
-                const char* command = "stop\n";
-                DWORD written;
-                if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-                    WARN("向 bedrock_server.exe 发送 stop 命令失败!");
-                } else {
-                    INFO("已向 bedrock_server.exe 发送 stop 命令!");
-                }
-
-                // 等待子进程结束
-                WaitForSingleObject(pi.hProcess, INFINITE);
-
-                // 关闭进程和线程句柄
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
-                CloseHandle(g_hChildStd_IN_Wr);
-                CloseHandle(g_hChildStd_IN_Rd);
-                CloseHandle(g_hChildStd_OUT_Wr);
-                CloseHandle(g_hChildStd_OUT_Rd);
-                INFO("bedrock_server.exe 已成功关闭!");
-            } else {
-                INFO("bedrock_server.exe 未运行，直接关闭程序...");
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            exit(0);
-            break;
         case CTRL_LOGOFF_EVENT:
-            // 检查 bedrock_server.exe 是否在运行
-            if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-                INFO("检测到 bedrock_server.exe 正在运行，发送 stop 指令...");
-                const char* command = "stop\n";
-                DWORD written;
-                if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-                    WARN("向 bedrock_server.exe 发送 stop 命令失败!");
-                } else {
-                    INFO("已向 bedrock_server.exe 发送 stop 命令!");
-                }
-
-                // 等待子进程结束
-                WaitForSingleObject(pi.hProcess, INFINITE);
-
-                // 关闭进程和线程句柄
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
-                CloseHandle(g_hChildStd_IN_Wr);
-                CloseHandle(g_hChildStd_IN_Rd);
-                CloseHandle(g_hChildStd_OUT_Wr);
-                CloseHandle(g_hChildStd_OUT_Rd);
-                INFO("bedrock_server.exe 已成功关闭!");
-            } else {
-                INFO("bedrock_server.exe 未运行，直接关闭程序...");
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            exit(0);
-            break;
         case CTRL_SHUTDOWN_EVENT:
-            // 检查 bedrock_server.exe 是否在运行
-            if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-                INFO("检测到 bedrock_server.exe 正在运行，发送 stop 指令...");
-                const char* command = "stop\n";
-                DWORD written;
-                if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-                    WARN("向 bedrock_server.exe 发送 stop 命令失败!");
-                } else {
-                    INFO("已向 bedrock_server.exe 发送 stop 命令!");
-                }
-
-                // 等待子进程结束
-                WaitForSingleObject(pi.hProcess, INFINITE);
-
-                // 关闭进程和线程句柄
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
-                CloseHandle(g_hChildStd_IN_Wr);
-                CloseHandle(g_hChildStd_IN_Rd);
-				CloseHandle(g_hChildStd_OUT_Wr);
-                CloseHandle(g_hChildStd_OUT_Rd);
-                INFO("bedrock_server.exe 已成功关闭!");
-            } else {
-                INFO("bedrock_server.exe 未运行，直接关闭程序...");
-            }
+            StopAllServers();
             std::this_thread::sleep_for(std::chrono::seconds(1));
             exit(0);
-            break;
         default:
             break;
     }
     return FALSE;
 }
-#endif
 
+bool ConfigureBdsInstances(const std::vector<BDSInstanceConfig>& instances, const std::string& defaultInstanceId, std::string& error) {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
 
-bool StartServer() {
-    #ifdef WIN32
-    INFO("正在启动BDS服务器...");
-    if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-        INFO("检测到服务器正在运行，无需重新启动！");
-        return true;
-    } else {
-        ZeroMemory(&si, sizeof(si));
-        si.cb = sizeof(si);
-        ZeroMemory(&pi, sizeof(pi));
+    if (instances.empty()) {
+        error = "实例列表不能为空";
+        return false;
+    }
 
-        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-        sa.bInheritHandle = TRUE;
-        sa.lpSecurityDescriptor = NULL;
+    for (auto& [_, runtime] : g_instances) {
+        StopServerInternal(*runtime);
+    }
+    g_instances.clear();
 
-        CreatePipe(&g_hChildStd_IN_Rd, &g_hChildStd_IN_Wr, &sa, 0);
-        SetHandleInformation(g_hChildStd_IN_Wr, HANDLE_FLAG_INHERIT, 0);
-        CreatePipe(&g_hChildStd_OUT_Rd, &g_hChildStd_OUT_Wr, &sa, 0);
-        SetHandleInformation(g_hChildStd_OUT_Rd, HANDLE_FLAG_INHERIT, 0);
-
-        si.hStdError = g_hChildStd_OUT_Wr;
-        si.hStdOutput = g_hChildStd_OUT_Wr;
-        si.hStdInput = g_hChildStd_IN_Rd;
-        si.dwFlags |= STARTF_USESTDHANDLES;
-
-        if (!CreateProcess(NULL, const_cast<char*>(ServerLocate.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-            WARN("服务器启动失败：" + std::to_string(GetLastError()));
-            return false;
-        } else {
-            INFO("服务器已启动成功...");
-            std::thread outThread([](){
-                char buffer[1024];
-                DWORD bytesRead = 0;
-                std::string a1, a2;
-                a2.clear();
-                int tot1 = 0, tot2 = 0;
-                while (true) {
-                    if (!ReadFile(g_hChildStd_OUT_Rd, buffer, sizeof(buffer), &bytesRead, NULL)) {
-                        break;
-                    }
-                    std::string output(buffer, bytesRead);
-                    a2+=output;
-                    std::vector<int> vec;
-                    for(int i=0;a2[i];i++){
-                        if(a2[i]=='\n')  vec.push_back(i);
-                    }
-                    for (int i=0, last=0; i<vec.size(); i++){
-                        a1 = a2.substr(last, vec[i]-last+1);
-                        last = vec[i]+1;
-                        if(a1[0]=='['&&a1[1]=='2'&&a1[a1.size()-1]=='\n')
-                        SYNC(std::cout)<<([](const std::string& a) -> std::string {
-                                std::string res;
-                                if(a[25]=='I')
-                                    res += (std::string)"\x1b[35m[" 
-                                    + a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
-                                    + a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
-                                    + "] \x1b[0m" + "\x1b[32m[INFO]\x1b[0m "
-                                    + a.substr(31);
-                                else if(a[25]=='W')
-                                    res += (std::string)"\x1b[35m[" 
-                                    + a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
-                                    + a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
-                                    + "] \x1b[0m" + "\x1b[43;1m[WARN]\x1b[0m "
-                                    + a.substr(31);
-                                else if(a[25]=='E')
-                                    res += (std::string)"\x1b[35m[" 
-                                    + a[1]+a[2]+a[3]+a[4]+'/'+a[6]+a[7]+'/'+a[9]+a[10]+ ' ' 
-                                    + a[12]+a[13]+a[14]+a[15]+a[16]+a[17]+a[18]+a[19]+a[20]+a[21]+a[22]+a[23] 
-                                    + "] \x1b[0m" + "\x1b[41;1m[FAIL]\x1b[0m "
-                                    + a.substr(32);
-                                //if(a[32]=='S' && a[a.size()-1]==a[a.size()-2]) res.pop_back();
-                                return res;
-                            })(a1), tot1++;
-                        else if(a1.size()>=5&&a1[a1.size()-1]=='\n')SYNC(std::cout)<<a1, tot1++;
-                    }
-                    a2 = a2.substr(vec[vec.size()-1], a2.size()-vec[vec.size()-1]);
-                    tot2++;
-                    // 这里将输出转发到 g_McOutputQueue
-                    if (isCommand) {
-                        std::lock_guard<std::mutex> lock(g_McOutputMutex);
-                        g_McOutputQueue.push(output);
-                        g_McOutputReady = true;
-                        g_McOutputCV.notify_one();
-                        isCommand = false;
-                        continue;
-                    }
-                    std::cout.flush();
-                }
-            });
-            outThread.detach();
+    for (const auto& cfg : instances) {
+        if (cfg.Id.empty()) {
+            error = "实例 Id 不能为空";
             return false;
         }
-    }
-    #else
-    INFO("暂时不支持Linux系统下的启动服务器功能");
-    return false;
-    #endif
-    return false;
+        if (cfg.ExecutablePath.empty()) {
+            error = "实例 ExecutablePath 不能为空: " + cfg.Id;
+            return false;
+        }
+        if (g_instances.count(cfg.Id) > 0) {
+            error = "实例 Id 重复: " + cfg.Id;
+            return false;
+        }
 
+        auto runtime = std::make_unique<InstanceRuntime>();
+        runtime->cfg = cfg;
+        if (runtime->cfg.Name.empty()) {
+            runtime->cfg.Name = cfg.Id;
+        }
+        if (runtime->cfg.LogTag.empty()) {
+            runtime->cfg.LogTag = cfg.Id;
+        }
+        if (runtime->cfg.WorkingDirectory.empty()) {
+            std::filesystem::path executablePath(cfg.ExecutablePath);
+            runtime->cfg.WorkingDirectory = executablePath.parent_path().string();
+        }
+        g_instances[cfg.Id] = std::move(runtime);
+    }
+
+    if (defaultInstanceId.empty() || g_instances.count(defaultInstanceId) == 0) {
+        g_defaultInstanceId = instances.front().Id;
+    } else {
+        g_defaultInstanceId = defaultInstanceId;
+    }
+
+    return true;
 }
 
-bool StopServer() {
-    #ifdef WIN32
-    	const char* command = "stop\n";
-    	DWORD written;
-    	if (!WriteFile(g_hChildStd_IN_Wr, command, strlen(command), &written, NULL)) {
-    		WARN("向服务器发送stop命令失败,原因可能是未使用startserver启动服务器");
-            return false;
-    	} else {
-    		INFO("已向服务器发送stop命令");
-    	}
+std::vector<std::string> ListServerInstances() {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    std::vector<std::string> ids;
+    ids.reserve(g_instances.size());
+    for (const auto& [id, _] : g_instances) {
+        ids.push_back(id);
+    }
+    std::sort(ids.begin(), ids.end());
+    return ids;
+}
 
-    	// 等待子进程结束
-    	WaitForSingleObject(pi.hProcess, INFINITE);
-
-    	CloseHandle(pi.hProcess);
-    	CloseHandle(pi.hThread);
-    	CloseHandle(g_hChildStd_IN_Wr);
-    	CloseHandle(g_hChildStd_IN_Rd);
-    	CloseHandle(g_hChildStd_OUT_Wr);
-    	CloseHandle(g_hChildStd_OUT_Rd);
-    	//检测bedrock_server.exe是否关闭
-    	if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-    		WARN("服务器未成功关闭...");
-            return false;
-    	} else {
-    		INFO("服务器已成功关闭...");
-            return true;
-    	}
-    #else
-    	INFO("暂时不支持Linux系统下的关闭服务器功能");
+bool SetDefaultServerInstance(const std::string& instanceId) {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    if (g_instances.count(instanceId) == 0) {
         return false;
-    #endif
-    return false;
+    }
+    g_defaultInstanceId = instanceId;
+    return true;
+}
+
+std::string GetDefaultServerInstance() {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    return g_defaultInstanceId;
+}
+
+std::string GetServerWorkingDirectory(const std::string& instanceId) {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    const std::string id = ResolveInstanceId(instanceId);
+    InstanceRuntime* runtime = GetRuntimeUnsafe(id);
+    if (runtime == nullptr) {
+        return "";
+    }
+    return runtime->cfg.WorkingDirectory;
+}
+
+bool StartServer(const std::string& instanceId) {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    const std::string id = ResolveInstanceId(instanceId);
+    InstanceRuntime* runtime = GetRuntimeUnsafe(id);
+    if (runtime == nullptr) {
+        WARN("未找到实例: " + id);
+        return false;
+    }
+    return StartServerInternal(*runtime);
+}
+
+bool StopServer(const std::string& instanceId) {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    const std::string id = ResolveInstanceId(instanceId);
+    InstanceRuntime* runtime = GetRuntimeUnsafe(id);
+    if (runtime == nullptr) {
+        WARN("未找到实例: " + id);
+        return false;
+    }
+    return StopServerInternal(*runtime);
+}
+
+void StopAllServers() {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    for (auto& [_, runtime] : g_instances) {
+        StopServerInternal(*runtime);
+    }
 }
 
 void BackupServer() {
-    std::thread([]() {
-        while (true) {
-            std::time_t current_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            std::tm current_tm = *std::localtime(&current_time_t);
-
-            current_tm.tm_hour = BackupHour;
-            current_tm.tm_min = BackupMinute%60;
-            current_tm.tm_sec = BackupSecond%60;
-
-            std::time_t target_time_t = std::mktime(&current_tm);
-
-            if (target_time_t <= current_time_t) {
-                current_tm.tm_mday += 1;
-                target_time_t = std::mktime(&current_tm);
-            }
-
-            double seconds_to_wait = difftime(target_time_t, current_time_t);
-
-            std::this_thread::sleep_for(std::chrono::seconds(static_cast<int>(seconds_to_wait)));
-
-			std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
-			StopServer();
-
-			std::this_thread::sleep_for(std::chrono::seconds(5));
-
-			std::string From = BackupFrom;
-			std::string To = BackupTo;
-
-			// 获取当前时间作为文件名
-			std::tm *time_info = std::localtime(&now);
-			char buffer[80];
-			std::strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", time_info);
-			std::string backup_filename = std::string(buffer) + ".zip"; // 使用当前时间作为文件名
-
-			// 创建目标路径
-			std::string backup_file_path = To + "/" + backup_filename;
-
-			// 使用系统命令压缩指定目录
-			std::string command = "zip -r \"" + backup_file_path + "\" \"" + From + "\"";
-			std::cout << "Running command: " << command << std::endl;
-
-			// 执行压缩命令
-			int result = std::system(command.c_str());
-			if (result == 0) {
-				std::cout << "Backup successful: " << backup_file_path << std::endl;
-                return true;
-			} else {
-                std::cout << "Backup failed!" << std::endl;
-                return false;
-			}
-        }
-    }).detach();
+    WARN("多实例模式下，BackupServer 入口尚未启用，请使用实例级备份任务");
 }
 
-std::string runCommand(const std::string& input_command) {
-    #ifdef WIN32
-    if (input_command.empty()) {
+std::string runCommand(const std::string& inputCommand, const std::string& instanceId) {
+    if (inputCommand.empty()) {
         WARN("命令不能为空");
         return "命令不能为空";
     }
-    std::string command = input_command;
+
+    std::unique_lock<std::mutex> managerLock(g_instancesMutex);
+    const std::string id = ResolveInstanceId(instanceId);
+    InstanceRuntime* runtime = GetRuntimeUnsafe(id);
+    if (runtime == nullptr) {
+        return "未找到实例: " + id;
+    }
+
+    if (!IsProcessAlive(*runtime)) {
+        return "实例未运行: " + id;
+    }
+
+    std::string command = inputCommand;
     if (command == "stop") {
-        StopServer();
-        //检查bedrock_server.exe是否关闭
-        if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-            return "服务器未成功关闭...";
-        } else {
-            return "服务器已成功关闭...";
-        }
+        managerLock.unlock();
+        return StopServer(id) ? "实例已关闭" : "实例关闭失败";
     }
     if (command == "start") {
-        StartServer();
-        //检查bedrock_server.exe是否启动
-        if (std::system("tasklist | findstr bedrock_server.exe") == 0) {
-            return "服务器已成功启动...";
-        } else {
-            return "服务器启动失败...";
-        }
+        managerLock.unlock();
+        return StartServer(id) ? "实例已启动" : "实例启动失败";
     }
+
     command += "\n";
-    DWORD written;
-    if (!WriteFile(g_hChildStd_IN_Wr, command.c_str(), command.size(), &written, NULL)) {
-        WARN("向服务器发送命令失败,原因可能是未使用startserver启动服务器");
-        return "向服务器发送命令失败,原因可能是未使用startserver启动服务器";
-    } else {
-        //删去命令中的\n并赋值给std_command
-        std::string std_command = command;
-        std_command.erase(std::remove(std_command.begin(), std_command.end(), '\n'), std_command.end());
-        INFO("已向服务器发送命令: " + std_command);
-        isCommand = true;
-        std::unique_lock<std::mutex> lock(g_McOutputMutex);
-        if (g_McOutputCV.wait_for(lock, std::chrono::seconds(3), [] { return g_McOutputReady; })) {
-            while (!g_McOutputQueue.empty()) {
-                std::string line = g_McOutputQueue.front();
-                g_McOutputQueue.pop();
-                line = std::regex_replace(line, std::regex(R"(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:\d{3} (INFO|ERROR|WARN)\] )"), "");
-                line.erase(0, line.find_first_not_of(" "));
-                g_McOutputReady = false;
-                g_McOutputQueue = std::queue<std::string>();
-                return line;
-            }
-            g_McOutputReady = false;
-        } else {
-            WARN("服务器3s内无任何返回，命令返回捕捉超时");
-            return "服务器3s内无任何返回，命令返回捕捉超时";
+    DWORD written = 0;
+    if (runtime->stdinWrite == NULL || !WriteFile(runtime->stdinWrite, command.c_str(), static_cast<DWORD>(command.size()), &written, NULL)) {
+        WARN("向实例 " + id + " 发送命令失败，错误码: " + std::to_string(GetLastError()));
+        return "发送命令失败";
+    }
+
+    INFO("[BDS:" + id + "] 已发送命令: " + inputCommand);
+
+    std::unique_lock<std::mutex> outputLock(runtime->outputMutex);
+    runtime->outputReady = false;
+    if (!runtime->outputCv.wait_for(outputLock, std::chrono::seconds(3), [&runtime] { return runtime->outputReady; })) {
+        return "实例在 3 秒内无输出";
+    }
+
+    std::string merged;
+    while (!runtime->outputQueue.empty()) {
+        if (!merged.empty()) {
+            merged += "\n";
         }
+        merged += runtime->outputQueue.front();
+        runtime->outputQueue.pop();
     }
-    #else
-    WARN("暂时不支持Linux系统下的执行mc指令功能");
-    return "暂时不支持Linux系统下的执行mc指令功能";
-    #endif
-    return "";
+    runtime->outputReady = false;
+
+    if (merged.empty()) {
+        return "命令已发送";
+    }
+    return merged;
 }
 
-bool AddPlayerToWhitelist(const std::string& player_name) {
-    std::string command = "whitelist add \"" + player_name + "\"";
-    std::string result = runCommand(command);
-    if (result.find("Player added to allowlist") != std::string::npos || result.find("Player already in allowlist") != std::string::npos) {
-        return true;
-    } else {
-        return false;
-    }
+bool AddPlayerToWhitelist(const std::string& player_name, const std::string& instanceId) {
+    const std::string command = "whitelist add \"" + player_name + "\"";
+    const std::string result = runCommand(command, instanceId);
+    return result.find("Player added to allowlist") != std::string::npos
+        || result.find("Player already in allowlist") != std::string::npos;
 }
 
-bool RemovePlayerFromWhitelist(const std::string& player_name) {
-    std::string command = "whitelist remove \"" + player_name + "\"";
-    std::string result = runCommand(command);
-    if (result.find("Player removed from allowlist") != std::string::npos) {
-        return true;
-    } else {
-        return false;
-    }
+bool RemovePlayerFromWhitelist(const std::string& player_name, const std::string& instanceId) {
+    const std::string command = "whitelist remove \"" + player_name + "\"";
+    const std::string result = runCommand(command, instanceId);
+    return result.find("Player removed from allowlist") != std::string::npos;
 }
+
+#else
+
+bool ConfigureBdsInstances(const std::vector<BDSInstanceConfig>&, const std::string&, std::string&) { return false; }
+std::vector<std::string> ListServerInstances() { return {}; }
+bool SetDefaultServerInstance(const std::string&) { return false; }
+std::string GetDefaultServerInstance() { return ""; }
+std::string GetServerWorkingDirectory(const std::string&) { return ""; }
+bool StartServer(const std::string&) { return false; }
+bool StopServer(const std::string&) { return false; }
+void StopAllServers() {}
+void BackupServer() {}
+std::string runCommand(const std::string&, const std::string&) { return "暂不支持"; }
+bool AddPlayerToWhitelist(const std::string&, const std::string&) { return false; }
+bool RemovePlayerFromWhitelist(const std::string&, const std::string&) { return false; }
+
+#endif
