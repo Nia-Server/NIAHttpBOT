@@ -61,8 +61,10 @@ If you have any problems with this project, please contact the authors.
 #include "QQBot_API.h"
 #include "File_API.h"
 #include "Game_API.h"
+#include "DB_API.h"
 #include "BDS_API.h"
 #include "HttpV1.hpp"
+#include "LocalDatabase.hpp"
 
 
 #include "Graphics.hpp"
@@ -374,6 +376,12 @@ signed int main(signed int argc, char** argv) {
 		return 1;
 	}
 
+	const auto dbInitResult = GetLocalDatabase().Initialize("./data/leveldb");
+	if (!dbInitResult.ok) {
+		FAIL("初始化本地数据库失败: " + dbInitResult.message);
+		return 1;
+	}
+
 	INFO("已成功读取配置文件");
 	if (LanguageFile.empty()) INFO("已使用默认语言");
 	else if (!i18n.loadFromFile(LanguageFile)) WARN("语言文件加载失败");
@@ -515,6 +523,9 @@ signed int main(signed int argc, char** argv) {
 
 	//初始化文件API
 	init_file_API(svr);
+
+	//初始化数据库API
+	init_db_API(svr);
 
 	//按实例自动启动服务器
 	int autoStartPending = 0;
