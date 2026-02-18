@@ -82,7 +82,6 @@ int WebUIPort = 5000;
 std::vector<BDSInstanceConfig> BdsInstances;
 std::string DefaultBdsInstanceId = "default";
 
-bool UseCmd = false;
 bool UseQQBot = false;
 std::string QQIPAddress = "127.0.0.1",
 WebUIWebsite, WebUIFile, WebUIWebsitePath;
@@ -342,6 +341,7 @@ signed int main(signed int argc, char** argv) {
 		cfg.ExecutablePath = item.ExecutablePath;
 		cfg.WorkingDirectory = item.WorkingDirectory;
 		cfg.AutoStart = item.AutoStart;
+		cfg.UseCmd = item.UseCmd;
 		cfg.AutoBackup = item.AutoBackup;
 		cfg.BackupHour = item.BackupHour;
 		cfg.BackupMinute = item.BackupMinute;
@@ -351,7 +351,6 @@ signed int main(signed int argc, char** argv) {
 		cfg.LogTag = item.LogTag;
 		BdsInstances.push_back(cfg);
 	}
-	UseCmd = appConfig.UseCmd;
 	UseQQBot = appConfig.UseQQBot;
 	QQIPAddress = appConfig.QQIPAddress;
 	QQClientPort = appConfig.QQClientPort;
@@ -386,7 +385,11 @@ signed int main(signed int argc, char** argv) {
 	XINFO("项目地址：https://github.com/Nia-Server/NIAHttpBOT/");
 	XINFO("项目作者：@NIANIANKNIA @jiansyuan");
 	XINFO("在使用中遇到问题请前往项目下的 issue 反馈，如果觉得本项目不错不妨点个 star");
-	if (UseCmd)  XWARN("检测到执行DOS命令功能已启用，请注意服务器安全");
+	for (const auto& item : BdsInstances) {
+		if (item.UseCmd) {
+			XWARN("检测到实例 " + item.Id + " 已启用执行DOS命令功能，请注意服务器安全");
+		}
+	}
 
 
 	#ifdef WIN32
@@ -423,6 +426,7 @@ signed int main(signed int argc, char** argv) {
 			cfgItem.ExecutablePath = item.ExecutablePath;
 			cfgItem.WorkingDirectory = item.WorkingDirectory;
 			cfgItem.AutoStart = item.AutoStart;
+			cfgItem.UseCmd = item.UseCmd;
 			cfgItem.AutoBackup = item.AutoBackup;
 			cfgItem.BackupHour = item.BackupHour;
 			cfgItem.BackupMinute = item.BackupMinute;
@@ -432,7 +436,6 @@ signed int main(signed int argc, char** argv) {
 			cfgItem.LogTag = item.LogTag;
 			currentCfg.BdsInstances.push_back(cfgItem);
 		}
-		currentCfg.UseCmd = UseCmd;
 		currentCfg.UseQQBot = UseQQBot;
 		currentCfg.QQIPAddress = QQIPAddress;
 		currentCfg.QQClientPort = QQClientPort;
@@ -465,8 +468,10 @@ signed int main(signed int argc, char** argv) {
 			return;
 		}
 
+		const std::string serverId = HttpV1::GetServerId(request);
+
 		//首先判断配置文件是否启用
-		if (!UseCmd) [[unlikely]] {
+		if (!IsCmdEnabledForInstance(serverId)) [[unlikely]] {
 			XWARN("执行DOS命令的功能暂未启用，请在启用后使用");
 			HttpV1::RespondFail(res, 300, "NIAHttpBOT自身错误");
 			return;

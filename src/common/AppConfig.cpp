@@ -102,6 +102,7 @@ static bool ParseInstanceObject(const rapidjson::Value& instanceObj, BdsInstance
     if (!SetStringIfExists(&instanceObj, "ExecutablePath", instance.ExecutablePath, error)) return false;
     if (!SetStringIfExists(&instanceObj, "WorkingDirectory", instance.WorkingDirectory, error)) return false;
     if (!SetBoolIfExists(&instanceObj, "AutoStart", instance.AutoStart, error)) return false;
+    if (!SetBoolIfExists(&instanceObj, "UseCmd", instance.UseCmd, error)) return false;
     if (!SetBoolIfExists(&instanceObj, "AutoBackup", instance.AutoBackup, error)) return false;
     if (!SetIntIfExists(&instanceObj, "BackupHour", instance.BackupHour, error)) return false;
     if (!SetIntIfExists(&instanceObj, "BackupMinute", instance.BackupMinute, error)) return false;
@@ -128,16 +129,10 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
     Config loaded = DefaultConfig();
 
     const rapidjson::Value* base = nullptr;
-    const rapidjson::Value* server = nullptr;
-    const rapidjson::Value* backup = nullptr;
-    const rapidjson::Value* features = nullptr;
     const rapidjson::Value* qqbot = nullptr;
     const rapidjson::Value* bds = nullptr;
 
     if (!GetObj(doc, "base", base, error)) return false;
-    if (!GetObj(doc, "server", server, error)) return false;
-    if (!GetObj(doc, "backup", backup, error)) return false;
-    if (!GetObj(doc, "features", features, error)) return false;
     if (!GetObj(doc, "qqbot", qqbot, error)) return false;
     if (!GetObj(doc, "bds", bds, error)) return false;
 
@@ -147,8 +142,6 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
     if (!SetBoolIfExists(base, "EnableWebUI", loaded.EnableWebUI, error)) return false;
     if (!SetStringIfExists(base, "WebUIFile", loaded.WebUIFile, error)) return false;
     if (!SetStringIfExists(base, "WebUIWebsitePath", loaded.WebUIWebsitePath, error)) return false;
-
-    if (!SetBoolIfExists(features, "UseCmd", loaded.UseCmd, error)) return false;
 
     if (!SetBoolIfExists(qqbot, "UseQQBot", loaded.UseQQBot, error)) return false;
     if (!SetStringIfExists(qqbot, "QQIPAddress", loaded.QQIPAddress, error)) return false;
@@ -212,16 +205,6 @@ bool SaveToJsonFile(const std::string& path, const Config& cfg, std::string& err
     base.AddMember("WebUIWebsitePath", rapidjson::Value(cfg.WebUIWebsitePath.c_str(), alloc), alloc);
     doc.AddMember("base", base, alloc);
 
-    rapidjson::Value server(rapidjson::kObjectType);
-    doc.AddMember("server", server, alloc);
-
-    rapidjson::Value backup(rapidjson::kObjectType);
-    doc.AddMember("backup", backup, alloc);
-
-    rapidjson::Value features(rapidjson::kObjectType);
-    features.AddMember("UseCmd", cfg.UseCmd, alloc);
-    doc.AddMember("features", features, alloc);
-
     rapidjson::Value qqbot(rapidjson::kObjectType);
     qqbot.AddMember("UseQQBot", cfg.UseQQBot, alloc);
     qqbot.AddMember("QQIPAddress", rapidjson::Value(cfg.QQIPAddress.c_str(), alloc), alloc);
@@ -241,6 +224,7 @@ bool SaveToJsonFile(const std::string& path, const Config& cfg, std::string& err
         instance.AddMember("ExecutablePath", rapidjson::Value(item.ExecutablePath.c_str(), alloc), alloc);
         instance.AddMember("WorkingDirectory", rapidjson::Value(item.WorkingDirectory.c_str(), alloc), alloc);
         instance.AddMember("AutoStart", item.AutoStart, alloc);
+        instance.AddMember("UseCmd", item.UseCmd, alloc);
         instance.AddMember("AutoBackup", item.AutoBackup, alloc);
         instance.AddMember("BackupHour", item.BackupHour, alloc);
         instance.AddMember("BackupMinute", item.BackupMinute, alloc);
@@ -266,7 +250,6 @@ bool GetValueByType(const Config& cfg, const std::string& name, char type, std::
         case 'B': {
             bool value;
             if (name == "EnableWebUI") value = cfg.EnableWebUI;
-            else if (name == "UseCmd") value = cfg.UseCmd;
             else if (name == "UseQQBot") value = cfg.UseQQBot;
             else return false;
             out = value ? "1" : "0";

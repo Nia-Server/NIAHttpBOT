@@ -12,6 +12,7 @@ struct BdsInstanceConfig {
     std::string ExecutablePath = "D:/NiaServer-Core/bedrock_server.exe";
     std::string WorkingDirectory = "D:/NiaServer-Core";
     bool AutoStart = false;
+    bool UseCmd = false;
 
     bool AutoBackup = false;
     int BackupHour = 4;
@@ -34,8 +35,6 @@ struct Config {
 
     std::string DefaultBdsInstanceId = "default";
     std::vector<BdsInstanceConfig> BdsInstances { BdsInstanceConfig{} };
-
-    bool UseCmd = false;
 
     bool UseQQBot = false;
     std::string QQIPAddress = "127.0.0.1";

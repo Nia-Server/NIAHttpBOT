@@ -378,6 +378,16 @@ std::string GetServerWorkingDirectory(const std::string& instanceId) {
     return runtime->cfg.WorkingDirectory;
 }
 
+bool IsCmdEnabledForInstance(const std::string& instanceId) {
+    std::lock_guard<std::mutex> lock(g_instancesMutex);
+    const std::string id = ResolveInstanceId(instanceId);
+    InstanceRuntime* runtime = GetRuntimeUnsafe(id);
+    if (runtime == nullptr) {
+        return false;
+    }
+    return runtime->cfg.UseCmd;
+}
+
 bool StartServer(const std::string& instanceId) {
     std::lock_guard<std::mutex> lock(g_instancesMutex);
     const std::string id = ResolveInstanceId(instanceId);
@@ -489,6 +499,7 @@ std::vector<std::string> ListServerInstances() { return {}; }
 bool SetDefaultServerInstance(const std::string&) { return false; }
 std::string GetDefaultServerInstance() { return ""; }
 std::string GetServerWorkingDirectory(const std::string&) { return ""; }
+bool IsCmdEnabledForInstance(const std::string&) { return false; }
 bool StartServer(const std::string&) { return false; }
 bool StopServer(const std::string&) { return false; }
 void StopAllServers() {}

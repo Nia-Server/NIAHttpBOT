@@ -180,27 +180,31 @@ CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-424268864-5579737-879501358-
         "WebUIFile": "./WebUI",
         "WebUIWebsitePath": "/"
     },
-    "server": {
-        "ServerLocate": "D:/NiaServer-Core/bedrock_server.exe",
-        "AutoStartServer": false
-    },
-    "backup": {
-        "AutoBackup": false,
-        "BackupHour": 4,
-        "BackupMinute": 0,
-        "BackupSecond": 0,
-        "BackupFrom": "D:/NiaServer-Core/worlds/250117",
-        "BackupTo": "./backup"
-    },
-    "features": {
-        "UseCmd": false
+    "bds": {
+        "DefaultInstanceId": "main",
+        "Instances": [
+            {
+                "Id": "main",
+                "Name": "Main",
+                "ExecutablePath": "D:/NiaServer-Core/bedrock_server.exe",
+                "WorkingDirectory": "D:/NiaServer-Core",
+                "AutoStart": true,
+                "UseCmd": false,
+                "AutoBackup": false,
+                "BackupHour": 4,
+                "BackupMinute": 0,
+                "BackupSecond": 0,
+                "BackupFrom": "D:/NiaServer-Core/worlds/250117",
+                "BackupTo": "./backup/default",
+                "LogTag": "main"
+            }
+        ]
     },
     "qqbot": {
         "UseQQBot": false,
         "QQIPAddress": "127.0.0.1",
         "QQClientPort": 10023,
         "QQServerPort": 10086,
-        "Locate": "/qq_event",
         "OwnerQQ": "123456789",
         "QQGroup": "123456789"
     }

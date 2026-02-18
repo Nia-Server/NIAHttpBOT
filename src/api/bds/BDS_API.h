@@ -15,6 +15,7 @@ struct BDSInstanceConfig {
 	std::string ExecutablePath;
 	std::string WorkingDirectory;
 	bool AutoStart = false;
+	bool UseCmd = false;
 	bool AutoBackup = false;
 	int BackupHour = 4;
 	int BackupMinute = 0;
@@ -35,6 +36,7 @@ std::vector<std::string> ListServerInstances();
 bool SetDefaultServerInstance(const std::string& instanceId);
 std::string GetDefaultServerInstance();
 std::string GetServerWorkingDirectory(const std::string& instanceId = "");
+bool IsCmdEnabledForInstance(const std::string& instanceId = "");
 
 bool StartServer(const std::string& instanceId = "");
 bool StopServer(const std::string& instanceId = "");
