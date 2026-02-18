@@ -126,9 +126,16 @@ std::string NormalizeBdsLine(const std::string& input) {
     return TrimRightSpace(line);
 }
 
+std::string StripAnsiEscape(const std::string& input) {
+    static const std::regex kAnsiEscape(R"(\x1B\[[0-?]*[ -/]*[@-~])");
+    return std::regex_replace(input, kAnsiEscape, "");
+}
+
 std::string BuildBdsLogPrefix(const InstanceRuntime& runtime) {
     const std::string& tag = runtime.cfg.LogTag.empty() ? runtime.cfg.Id : runtime.cfg.LogTag;
-    return "[BDS/" + tag + "] ";
+    const bool isMain = (runtime.cfg.Id == "main");
+    const char* instanceColor = isMain ? "\x1b[95m" : "\x1b[93m";
+    return "[BDS:\x1b[1m" + std::string(instanceColor) + tag + "\x1b[22m\x1b[39m] ";
 }
 
 void ReaderThread(InstanceRuntime* runtime) {
@@ -438,6 +445,14 @@ std::string runCommand(const std::string& inputCommand, const std::string& insta
         return "实例未运行: " + id;
     }
 
+    {
+        std::lock_guard<std::mutex> outputLock(runtime->outputMutex);
+        while (!runtime->outputQueue.empty()) {
+            runtime->outputQueue.pop();
+        }
+        runtime->outputReady = false;
+    }
+
     std::string command = inputCommand;
     if (command == "stop") {
         managerLock.unlock();
@@ -455,12 +470,15 @@ std::string runCommand(const std::string& inputCommand, const std::string& insta
         return "发送命令失败";
     }
 
-    INFO("[BDS:" + id + "] 已发送命令: " + inputCommand);
+    INFO(BuildBdsLogPrefix(*runtime) + "已发送命令: " + inputCommand);
 
     std::unique_lock<std::mutex> outputLock(runtime->outputMutex);
-    runtime->outputReady = false;
     if (!runtime->outputCv.wait_for(outputLock, std::chrono::seconds(3), [&runtime] { return runtime->outputReady; })) {
         return "实例在 3 秒内无输出";
+    }
+
+    while (runtime->outputCv.wait_for(outputLock, std::chrono::milliseconds(150), [&runtime] { return runtime->outputReady; })) {
+        runtime->outputReady = false;
     }
 
     std::string merged;
@@ -468,7 +486,7 @@ std::string runCommand(const std::string& inputCommand, const std::string& insta
         if (!merged.empty()) {
             merged += "\n";
         }
-        merged += runtime->outputQueue.front();
+        merged += StripAnsiEscape(runtime->outputQueue.front());
         runtime->outputQueue.pop();
     }
     runtime->outputReady = false;

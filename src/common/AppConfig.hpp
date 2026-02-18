@@ -34,6 +34,7 @@ struct Config {
     std::string WebUIWebsitePath = "/";
 
     std::string DefaultBdsInstanceId = "default";
+    int AutoStartDelaySeconds = 5;
     std::vector<BdsInstanceConfig> BdsInstances { BdsInstanceConfig{} };
 
     bool UseQQBot = false;

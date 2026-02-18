@@ -152,6 +152,7 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
 
     if (bds) {
         if (!SetStringIfExists(bds, "DefaultInstanceId", loaded.DefaultBdsInstanceId, error)) return false;
+        if (!SetIntIfExists(bds, "AutoStartDelaySeconds", loaded.AutoStartDelaySeconds, error)) return false;
         if (bds->HasMember("Instances")) {
             const rapidjson::Value& arr = (*bds)["Instances"];
             if (!arr.IsArray()) {
@@ -179,6 +180,11 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
 
     if (loaded.DefaultBdsInstanceId.empty()) {
         loaded.DefaultBdsInstanceId = loaded.BdsInstances.front().Id;
+    }
+
+    if (loaded.AutoStartDelaySeconds < 0) {
+        error = "字段 bds.AutoStartDelaySeconds 不能小于 0";
+        return false;
     }
 
     cfg = loaded;
@@ -216,6 +222,7 @@ bool SaveToJsonFile(const std::string& path, const Config& cfg, std::string& err
 
     rapidjson::Value bds(rapidjson::kObjectType);
     bds.AddMember("DefaultInstanceId", rapidjson::Value(cfg.DefaultBdsInstanceId.c_str(), alloc), alloc);
+    bds.AddMember("AutoStartDelaySeconds", cfg.AutoStartDelaySeconds, alloc);
     rapidjson::Value instances(rapidjson::kArrayType);
     for (const auto& item : cfg.BdsInstances) {
         rapidjson::Value instance(rapidjson::kObjectType);

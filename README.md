@@ -182,6 +182,7 @@ CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-424268864-5579737-879501358-
     },
     "bds": {
         "DefaultInstanceId": "main",
+        "AutoStartDelaySeconds": 5,
         "Instances": [
             {
                 "Id": "main",

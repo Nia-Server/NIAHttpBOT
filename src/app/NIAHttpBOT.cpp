@@ -81,6 +81,7 @@ int WebUIPort = 5000;
 
 std::vector<BDSInstanceConfig> BdsInstances;
 std::string DefaultBdsInstanceId = "default";
+int AutoStartDelaySeconds = 5;
 
 bool UseQQBot = false;
 std::string QQIPAddress = "127.0.0.1",
@@ -333,6 +334,7 @@ signed int main(signed int argc, char** argv) {
 	WebUIFile = appConfig.WebUIFile;
 	WebUIWebsitePath = appConfig.WebUIWebsitePath;
 	DefaultBdsInstanceId = appConfig.DefaultBdsInstanceId;
+	AutoStartDelaySeconds = appConfig.AutoStartDelaySeconds;
 	BdsInstances.clear();
 	for (const auto& item : appConfig.BdsInstances) {
 		BDSInstanceConfig cfg;
@@ -419,6 +421,7 @@ signed int main(signed int argc, char** argv) {
 		currentCfg.WebUIFile = WebUIFile;
 		currentCfg.WebUIWebsitePath = WebUIWebsitePath;
 		currentCfg.DefaultBdsInstanceId = DefaultBdsInstanceId;
+		currentCfg.AutoStartDelaySeconds = AutoStartDelaySeconds;
 		for (const auto& item : BdsInstances) {
 			AppCfg::BdsInstanceConfig cfgItem;
 			cfgItem.Id = item.Id;
@@ -514,9 +517,20 @@ signed int main(signed int argc, char** argv) {
 	init_file_API(svr);
 
 	//按实例自动启动服务器
+	int autoStartPending = 0;
+	for (const auto& item : BdsInstances) {
+		if (item.AutoStart) {
+			autoStartPending++;
+		}
+	}
+
 	for (const auto& item : BdsInstances) {
 		if (item.AutoStart) {
 			StartServer(item.Id);
+			autoStartPending--;
+			if (autoStartPending > 0 && AutoStartDelaySeconds > 0) {
+				std::this_thread::sleep_for(std::chrono::seconds(AutoStartDelaySeconds));
+			}
 		}
 	}
 
