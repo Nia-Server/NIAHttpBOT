@@ -39,6 +39,7 @@ If you have any problems with this project, please contact the authors.
 
 #ifdef WIN32 //only enable TLS in windows
 #define CPPHTTPLIB_OPENSSL_SUPPORT
+#include <io.h>
 #include <process.h>
 #else
 #include <unistd.h>
@@ -163,6 +164,14 @@ AppCfg::Config BuildCurrentConfigSnapshot() {
 	currentCfg.OwnerQQ = OwnerQQ;
 	currentCfg.QQGroup = QQGroup;
 	return currentCfg;
+}
+
+bool HasInteractiveStdin() {
+#ifdef WIN32
+	return _isatty(_fileno(stdin)) != 0;
+#else
+	return isatty(fileno(stdin)) != 0;
+#endif
 }
 
 }
@@ -404,80 +413,9 @@ signed int main(signed int argc, char** argv) {
 	httplib::Server svr;
 	httplib::Server qqsvr;
 
-    svr.Post("/GetConfig", [](const httplib::Request& req, httplib::Response& res){
-		rapidjson::Document req_json;
-		req_json.Parse(req.body.c_str()), res.status = 400;
-		if(req_json.HasParseError()||!req_json.HasMember("Name")||!req_json.HasMember("Type")
-			||!req_json["Name"].IsString()||!req_json["Type"].IsString()||req_json["Type"].GetStringLength()!=1) [[unlikely]]
-			return res.set_content("json data error", "text/plain");
-		const AppCfg::Config currentCfg = BuildCurrentConfigSnapshot();
-
-		std::string value;
-		const std::string name = req_json["Name"].GetString();
-		const char type = req_json["Type"].GetString()[0];
-		if (!AppCfg::GetValueByType(currentCfg, name, type, value)) {
-			res.status = 400;
-			return res.set_content("config key/type error", "text/plain");
-		}
-
-		res.status = 200;
-		res.set_content(value, "text/plain");
-
-	});
-
-	//执行cmd命令
-	svr.Post("/RunCmd",  [](const httplib::Request& req, httplib::Response& res) {
-		rapidjson::Document request;
-		if (!HttpV1::ParseRequestV1(req, res, request)) {
-			return;
-		}
-
-		std::string cmd;
-		if (!HttpV1::RequireString(request, res, "cmd", cmd)) {
-			return;
-		}
-
-		const std::string serverId = HttpV1::GetServerId(request);
-
-		//首先判断配置文件是否启用
-		if (!IsCmdEnabledForInstance(serverId)) [[unlikely]] {
-			XWARN("执行DOS命令的功能暂未启用，请在启用后使用");
-			HttpV1::RespondFail(res, 300, "NIAHttpBOT自身错误");
-			return;
-		}
-
-		WARN(XX("收到一条执行DOS命令的请求：") + cmd);
-		auto [cmdres, excd] = ([&cmd]() -> std::pair<std::string, int> {
-			int exitCode = 0;
-			std::array<char, 64> buffer {};
-			std::string result;
-			FILE *pipe = popen(cmd.c_str(), "r");
-			if (pipe == nullptr) [[unlikely]] return {"popen() error!!", -114514};
-			std::size_t bytesRead;
-			while ((bytesRead = std::fread(buffer.data(), sizeof(buffer.at(0)), sizeof(buffer), pipe)) != 0)
-				result += std::string(buffer.data(), bytesRead);
-			exitCode = WEXITSTATUS(pclose(pipe));
-			return {result, exitCode};
-		})();
-		if(!cmdres.empty() && cmdres.back() == '\n') [[likely]] cmdres.pop_back();
-		INFO(XX("命令执行输出: ") + cmdres);
-		if (excd!=0) [[unlikely]] WARN(XXX("命令执行失败, 返回值: ")+std::to_string(excd));
-		else XINFO("命令执行成功！返回值: 0");
-
-		rapidjson::Document dataDoc;
-		auto& allocator = dataDoc.GetAllocator();
-		rapidjson::Value data(rapidjson::kObjectType);
-		data.AddMember("output", rapidjson::Value(cmdres.c_str(), allocator), allocator);
-		data.AddMember("exit_code", excd, allocator);
-		HttpV1::RespondSuccess(res, &data);
-	});
-
 	//qq机器人主函数
 	main_qqbot(qqsvr);
 	init_qq_API(svr);
-
-	//初始化游戏API
-	init_game_API(svr);
 
 	//初始化文件API
 	init_file_API(svr);
@@ -644,10 +582,19 @@ signed int main(signed int argc, char** argv) {
     };
 
 	// 启动输入监听线程
-	std::thread inputThread([&commandMap, &printCommandResult]() {
+	const bool stdinInteractive = HasInteractiveStdin();
+	std::thread inputThread([&commandMap, &printCommandResult, stdinInteractive]() {
 		std::string line;
 		while (true) {
 			if (!std::getline(std::cin, line)) {
+				if (IsExitStopRequested()) {
+					break;
+				}
+				if (std::cin.eof() && stdinInteractive) {
+					WARN("检测到终端输入已关闭，正在安全关闭所有实例...");
+					StopAllServersForExit();
+					break;
+				}
 				// Avoid high CPU usage if stdin is closed (e.g. running as service)
 				std::this_thread::sleep_for(std::chrono::seconds(1));
 				if (std::cin.eof()) continue; // Keep running if intention is to stay alive
@@ -695,6 +642,7 @@ signed int main(signed int argc, char** argv) {
 
     // 等待输入线程完成
     inputThread.join();
+	StopAllServersForExit();
 
 	return 0;
 }

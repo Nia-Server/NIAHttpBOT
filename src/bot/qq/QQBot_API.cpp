@@ -2,6 +2,22 @@
 
 #include "HttpV1.hpp"
 
+namespace {
+
+bool GetOptionalBool(const rapidjson::Document& doc, httplib::Response& res, const char* key, bool& value) {
+    if (!doc.HasMember(key)) {
+        return true;
+    }
+    if (!doc[key].IsBool()) {
+        HttpV1::RespondFail(res, 102, std::string("请求体键的值格式错误: ") + key);
+        return false;
+    }
+    value = doc[key].GetBool();
+    return true;
+}
+
+}
+
 QQBot::QQBot(const std::string& IPAddress, int QQClientPort)
     {
     
@@ -460,17 +476,36 @@ QQBot::group_member_info QQBot::get_group_member_info(const std::string & group_
 void init_qq_API(httplib::Server &svr) {
 
     //发送qq消息
-	svr.Post("/SendQQGroupMessage", [](const httplib::Request& req, httplib::Response& res) {
-		INFO("[HttpRequest] 接收到发送群消息请求");
+    svr.Post("/qq/sendmsg", [](const httplib::Request& req, httplib::Response& res) {
+        INFO("[HttpRequest] 接收到发送QQ消息请求");
 
 		rapidjson::Document request;
 		if (!HttpV1::ParseRequestV1(req, res, request)) {
 			return;
 		}
 
-		std::string group_id;
+        std::string target_type = "group";
+        if (request.HasMember("target_type")) {
+            if (!request["target_type"].IsString()) {
+                HttpV1::RespondFail(res, 102, "请求体键的值格式错误: target_type");
+                return;
+            }
+            target_type = request["target_type"].GetString();
+        }
+
+        if (target_type != "group" && target_type != "private") {
+            HttpV1::RespondFail(res, 102, "请求体键的值格式错误: target_type");
+            return;
+        }
+
+        std::string target_id;
 		std::string message;
-		if (!HttpV1::RequireString(request, res, "group_id", group_id) || !HttpV1::RequireString(request, res, "message", message)) {
+        if (!HttpV1::RequireString(request, res, "target_id", target_id) || !HttpV1::RequireString(request, res, "message", message)) {
+            return;
+        }
+
+        bool auto_escape = false;
+        if (!GetOptionalBool(request, res, "auto_escape", auto_escape)) {
 			return;
 		}
 
@@ -483,24 +518,30 @@ void init_qq_API(httplib::Server &svr) {
             return;
         }
 
-        // Send the message to the group
-        int result = qqbot->send_group_message(group_id, message, false);
+        int result = 0;
+        if (target_type == "group") {
+            result = qqbot->send_group_message(target_id, message, auto_escape);
+        } else {
+            result = qqbot->send_private_message(target_id, message, auto_escape);
+        }
 
         // Log the result
         if (result > 0) {
-            INFO("Successfully sent message to group " + group_id + " with message_id: " + std::to_string(result));
+            INFO("Successfully sent " + target_type + " message to target " + target_id + " with message_id: " + std::to_string(result));
             rapidjson::Document dataDoc;
             auto& allocator = dataDoc.GetAllocator();
             rapidjson::Value data(rapidjson::kObjectType);
             data.AddMember("message_id", result, allocator);
+            data.AddMember("target_type", rapidjson::Value(target_type.c_str(), allocator), allocator);
+            data.AddMember("target_id", rapidjson::Value(target_id.c_str(), allocator), allocator);
             HttpV1::RespondSuccess(res, &data);
         } else {
-            WARN("Failed to send message to group " + group_id + ". Error code: " + std::to_string(result));
+            WARN("Failed to send " + target_type + " message to target " + target_id + ". Error code: " + std::to_string(result));
             if (result == -2) {
-                HttpV1::RespondFail(res, 501, "目标qq群不存在");
+				HttpV1::RespondFail(res, 501, "目标不存在或不可达");
                 return;
             }
-            HttpV1::RespondFail(res, 502, "qq群消息发送失败");
+            HttpV1::RespondFail(res, 502, "消息发送失败");
         }
 	});
 

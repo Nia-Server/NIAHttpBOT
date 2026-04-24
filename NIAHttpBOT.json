@@ -19,15 +19,15 @@
       {
         "Id": "default",
         "Name": "Default",
-        "ExecutablePath": "D:/Project/Game/NiaServer-Core/bedrock_server.exe",
-        "WorkingDirectory": "D:/Project/Game/NiaServer-Core",
+        "ExecutablePath": "D:/NiaServer-Core/bedrock_server.exe",
+        "WorkingDirectory": "D:/NiaServer-Core",
         "AutoStart": false,
         "UseCmd": false,
         "AutoBackup": false,
         "BackupHour": 4,
         "BackupMinute": 0,
         "BackupSecond": 0,
-        "BackupFrom": "D:/Project/Game/NiaServer-Core/worlds/250117",
+        "BackupFrom": "D:/NiaServer-Core/worlds/250117",
         "BackupTo": "./backup/default",
         "LogTag": "default"
       }

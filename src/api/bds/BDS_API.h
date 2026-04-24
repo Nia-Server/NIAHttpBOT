@@ -56,6 +56,7 @@ bool StartServer(const std::string& instanceId = "");
 bool StopServer(const std::string& instanceId = "");
 void StopAllServers();
 void StopAllServersForExit();
+bool IsExitStopRequested();
 void BackupServer();
 std::string runCommand(const std::string& command, const std::string& instanceId = "");
 bool AddPlayerToWhitelist(const std::string& player_name, const std::string& instanceId = "");

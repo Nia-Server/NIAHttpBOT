@@ -18,7 +18,6 @@ QQBot* qqbot;
 //QQBot* qqbot; dangerous!!!!!!
 
 std::vector<std::string> forbiddenWords;
-std::vector<std::string> msgs;
 
 struct command_addition_info {
     std::string group_id;
@@ -890,78 +889,6 @@ void main_qqbot(httplib::Server &svr) {
 
 
 
-	//接收MC服务器的数据交换
-	svr.Post("/exchange_data", [](const httplib::Request& req, httplib::Response& res) {
-		//解析字符串并创建一个json对象
-		rapidjson::Document exc_data;
-		exc_data.Parse(req.body.c_str());
-		const rapidjson::Value& receive_data = exc_data["data"];
-		//判断是否为数组
-		if (!receive_data.IsArray()) {
-			res.status = 400;
-			res.set_content("Bad Request", "text/plain");
-			return ;
-		}
-		for (rapidjson::SizeType i = 0; i < receive_data.Size(); i++) {
-			rapidjson::Value::ConstObject msg = receive_data[i].GetObject();
-			qqbot->send_group_message(QQGroup, msg["data"].GetString());
-		}
-
-		//创建一个json对象，用来存储群消息
-		rapidjson::Document groupMsgs;
-		groupMsgs.SetObject();
-
-		//添加time键值对
-		rapidjson::Value time(rapidjson::kStringType);
-		time.SetString("2019-01-28 12:00:00", groupMsgs.GetAllocator());
-		groupMsgs.AddMember("time", time, groupMsgs.GetAllocator());
-
-		//添加data键值对到groupMsgs对象中
-		rapidjson::Value data(rapidjson::kArrayType);
-		groupMsgs.AddMember("data", data, groupMsgs.GetAllocator());
-
-		//获取当前时间字符串，形如“2021-01-01 00:00:00”
-		std::time_t now = std::time(nullptr);
-		std::tm* now_tm = std::localtime(&now);
-		std::ostringstream oss;
-		oss << std::put_time(now_tm, "%Y-%m-%d %H:%M:%S");
-		std::string now_time_str = oss.str();
-
-		//修改groupMsgs对象中的time键值对
-		groupMsgs["time"].SetString(now_time_str.c_str(), groupMsgs.GetAllocator());
-
-		for (const auto& msg : msgs) {
-			INFO(XX("MC服务器接收的数据为:") << req.body);
-			//创建single_msg对象
-			rapidjson::Value single_msg(rapidjson::kObjectType);
-
-			//将data键值对添加到single_msg对象中
-			rapidjson::Value data(rapidjson::kStringType);
-			data.SetString(msg.c_str(), groupMsgs.GetAllocator());
-			single_msg.AddMember("data", data, groupMsgs.GetAllocator());
-
-			//将type字符串添加到groupMsgs对象中
-			rapidjson::Value type(rapidjson::kStringType);
-			type.SetString("group_msg", groupMsgs.GetAllocator());
-			groupMsgs.AddMember("type", type, groupMsgs.GetAllocator());
-
-			//将single_msg对象添加到groupMsgs对象中
-			groupMsgs["data"].PushBack(single_msg, groupMsgs.GetAllocator());
-		}
-
-		//将groupMsgs转化为字符串
-		rapidjson::StringBuffer buffer;
-		rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-		groupMsgs.Accept(writer);
-		std::string groupMsgs_str = buffer.GetString();
-		//清除msgs
-		msgs.clear();
-		//向MC服务器发送数据
-		res.status = 200;
-		res.set_content(groupMsgs_str, "text/plain");
-
-	});
-
 	//接收QQ消息事件
 	auto qqEventHandler = [](const httplib::Request& req, httplib::Response& res) {
 
@@ -1162,16 +1089,6 @@ void main_qqbot(httplib::Server &svr) {
 				return ;
 			}
 			//群消息转发
-			std::string nickname = qq_event_data["sender"]["nickname"].GetString();
-			std::string card = qq_event_data["sender"]["card"].GetString();
-			if (card == "") {
-				msgs.push_back("§6[群聊] §r<" + nickname + "> " + transfer_message);
-			} else {
-				msgs.push_back("§6[群聊] §r<" + card + "> " + transfer_message);
-			}
-
-
-
 			return ;
 		}
 

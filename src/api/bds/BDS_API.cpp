@@ -400,8 +400,7 @@ BOOL WINAPI ConsoleHandler(DWORD dwCtrlType) {
         case CTRL_LOGOFF_EVENT:
         case CTRL_SHUTDOWN_EVENT:
             StopAllServersForExit();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            exit(0);
+            return TRUE;
         default:
             break;
     }
@@ -593,6 +592,10 @@ void StopAllServersForExit() {
     StopAllServers();
 }
 
+bool IsExitStopRequested() {
+    return g_exitStopRequested.load();
+}
+
 void BackupServer() {
     WARN("多实例模式下，BackupServer 入口尚未启用，请使用实例级备份任务");
 }
@@ -703,6 +706,7 @@ bool StartServer(const std::string&) { return false; }
 bool StopServer(const std::string&) { return false; }
 void StopAllServers() {}
 void StopAllServersForExit() {}
+bool IsExitStopRequested() { return false; }
 void BackupServer() {}
 std::string runCommand(const std::string&, const std::string&) { return "暂不支持"; }
 bool AddPlayerToWhitelist(const std::string&, const std::string&) { return false; }
