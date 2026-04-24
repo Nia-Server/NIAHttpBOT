@@ -1,0 +1,36 @@
+{
+  "base": {
+    "LanguageFile": "",
+    "IPAddress": "127.0.0.1",
+    "ServerPort": 2333
+  },
+  "qqbot": {
+    "UseQQBot": false,
+    "QQIPAddress": "127.0.0.1",
+    "QQClientPort": 10023,
+    "QQServerPort": 10086,
+    "OwnerQQ": "123456789",
+    "QQGroup": "123456789"
+  },
+  "bds": {
+    "DefaultInstanceId": "default",
+    "AutoStartDelaySeconds": 5,
+    "Instances": [
+      {
+        "Id": "default",
+        "Name": "Default",
+        "ExecutablePath": "D:/Project/Game/NiaServer-Core/bedrock_server.exe",
+        "WorkingDirectory": "D:/Project/Game/NiaServer-Core",
+        "AutoStart": false,
+        "UseCmd": false,
+        "AutoBackup": false,
+        "BackupHour": 4,
+        "BackupMinute": 0,
+        "BackupSecond": 0,
+        "BackupFrom": "D:/Project/Game/NiaServer-Core/worlds/250117",
+        "BackupTo": "./backup/default",
+        "LogTag": "default"
+      }
+    ]
+  }
+}

@@ -20,6 +20,7 @@ If you have any problems with this project, please contact the authors.
 
 
 #include <ctime>
+#include <array>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -29,7 +30,6 @@ If you have any problems with this project, please contact the authors.
 #include <cstdio>
 #include <unordered_map>
 #include <chrono>
-#include <unordered_map>
 #include <functional>
 #include <sstream>
 #include <queue>
@@ -61,15 +61,8 @@ If you have any problems with this project, please contact the authors.
 #include "QQBot_API.h"
 #include "File_API.h"
 #include "Game_API.h"
-#include "DB_API.h"
 #include "BDS_API.h"
 #include "HttpV1.hpp"
-#include "LocalDatabase.hpp"
-
-
-#include "Graphics.hpp"
-#include "OBJ_Loader.h"
-#include "WebUI.hpp"
 
 
 //定义版本号
@@ -79,21 +72,100 @@ If you have any problems with this project, please contact the authors.
 std::string LanguageFile = "";
 std::string IPAddress = "127.0.0.1";
 int ServerPort = 2333;
-int WebUIPort = 5000;
 
 std::vector<BDSInstanceConfig> BdsInstances;
 std::string DefaultBdsInstanceId = "default";
 int AutoStartDelaySeconds = 5;
 
 bool UseQQBot = false;
-std::string QQIPAddress = "127.0.0.1",
-WebUIWebsite, WebUIFile, WebUIWebsitePath;
-bool EnableWebUI;
+std::string QQIPAddress = "127.0.0.1";
 
 int QQClientPort = 10023;
 int QQServerPort = 10086;
 std::string OwnerQQ = "123456789";
 std::string QQGroup = "123456789";
+
+namespace {
+
+BDSInstanceConfig ToRuntimeInstanceConfig(const AppCfg::BdsInstanceConfig& item) {
+	BDSInstanceConfig cfg;
+	cfg.Id = item.Id;
+	cfg.Name = item.Name;
+	cfg.ExecutablePath = item.ExecutablePath;
+	cfg.WorkingDirectory = item.WorkingDirectory;
+	cfg.AutoStart = item.AutoStart;
+	cfg.UseCmd = item.UseCmd;
+	cfg.AutoBackup = item.AutoBackup;
+	cfg.BackupHour = item.BackupHour;
+	cfg.BackupMinute = item.BackupMinute;
+	cfg.BackupSecond = item.BackupSecond;
+	cfg.BackupFrom = item.BackupFrom;
+	cfg.BackupTo = item.BackupTo;
+	cfg.LogTag = item.LogTag;
+	return cfg;
+}
+
+AppCfg::BdsInstanceConfig ToAppConfigInstance(const BDSInstanceConfig& item) {
+	AppCfg::BdsInstanceConfig cfg;
+	cfg.Id = item.Id;
+	cfg.Name = item.Name;
+	cfg.ExecutablePath = item.ExecutablePath;
+	cfg.WorkingDirectory = item.WorkingDirectory;
+	cfg.AutoStart = item.AutoStart;
+	cfg.UseCmd = item.UseCmd;
+	cfg.AutoBackup = item.AutoBackup;
+	cfg.BackupHour = item.BackupHour;
+	cfg.BackupMinute = item.BackupMinute;
+	cfg.BackupSecond = item.BackupSecond;
+	cfg.BackupFrom = item.BackupFrom;
+	cfg.BackupTo = item.BackupTo;
+	cfg.LogTag = item.LogTag;
+	return cfg;
+}
+
+void ApplyLoadedConfig(const AppCfg::Config& appConfig) {
+	LanguageFile = appConfig.LanguageFile;
+	IPAddress = appConfig.IPAddress;
+	ServerPort = appConfig.ServerPort;
+	DefaultBdsInstanceId = appConfig.DefaultBdsInstanceId;
+	AutoStartDelaySeconds = appConfig.AutoStartDelaySeconds;
+	BdsInstances.clear();
+	BdsInstances.reserve(appConfig.BdsInstances.size());
+	for (const auto& item : appConfig.BdsInstances) {
+		BdsInstances.push_back(ToRuntimeInstanceConfig(item));
+	}
+	UseQQBot = appConfig.UseQQBot;
+	QQIPAddress = appConfig.QQIPAddress;
+	QQClientPort = appConfig.QQClientPort;
+	QQServerPort = appConfig.QQServerPort;
+	OwnerQQ = appConfig.OwnerQQ;
+	QQGroup = appConfig.QQGroup;
+}
+
+AppCfg::Config BuildCurrentConfigSnapshot() {
+	AppCfg::Config currentCfg;
+	currentCfg.LanguageFile = LanguageFile;
+	currentCfg.IPAddress = IPAddress;
+	currentCfg.ServerPort = ServerPort;
+	currentCfg.DefaultBdsInstanceId = GetDefaultServerInstance();
+	if (currentCfg.DefaultBdsInstanceId.empty()) {
+		currentCfg.DefaultBdsInstanceId = DefaultBdsInstanceId;
+	}
+	currentCfg.AutoStartDelaySeconds = AutoStartDelaySeconds;
+	currentCfg.BdsInstances.reserve(BdsInstances.size());
+	for (const auto& item : BdsInstances) {
+		currentCfg.BdsInstances.push_back(ToAppConfigInstance(item));
+	}
+	currentCfg.UseQQBot = UseQQBot;
+	currentCfg.QQIPAddress = QQIPAddress;
+	currentCfg.QQClientPort = QQClientPort;
+	currentCfg.QQServerPort = QQServerPort;
+	currentCfg.OwnerQQ = OwnerQQ;
+	currentCfg.QQGroup = QQGroup;
+	return currentCfg;
+}
+
+}
 
 #ifdef WIN32
 
@@ -189,57 +261,10 @@ void sslThread(){
 }
 #endif
 
-
-
-void convertOBJToGrid(const std::string& objFilePath, G& graphics) {
-    // 加载OBJ文件
-    objl::Loader loader;
-    loader.LoadFile(objFilePath);
-
-	for(auto mesh : loader.LoadedMeshes)
-    {
-        for(int i=0;i<mesh.Vertices.size();i+=3)
-        {
-			Eigen::Vector3f p[3];
-            for(int j=0;j<3;j++)
-            {
-				p[j]={mesh.Vertices[i+j].Position.X, mesh.Vertices[i+j].Position.Y, mesh.Vertices[i+j].Position.Z};
-            }
-			graphics.addVertice(p[0],p[1],p[2]);
-        }
-    }
-}
-
-
-
-class TEST{
-
-
-public:
-
-httplib::Client cli;
-TEST(const std::string &str) : cli(str) {}
-
-};
-
 signed int main(signed int argc, char** argv) {
-
-// TEST *tttt;
-// tttt = new TEST("dsaasdasd:1234");
-
-// Sleep(9999999999);
 
 	const std::string configPath = "./NIAHttpBOT.json";
 	AppCfg::Config appConfig = AppCfg::DefaultConfig();
-	// G g1(10, 10, 10);
-	// convertOBJToGrid("bunny.obj", g1);
-	// g1.autoAdjust();
-	// g1.calcGrid();
-	// g1.printGrid();
-
-	//g1.setResultSize(20,20,20);
-
-	//g1.printGrid();
 	#ifdef WIN32
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleCP(CP_UTF8);
@@ -250,7 +275,7 @@ signed int main(signed int argc, char** argv) {
 	std::cout << "\033]0;NIAHttpBOT " << VERSION <<"\007";
 
 	std::atexit([]() {
-		StopAllServers();
+		StopAllServersForExit();
 	});
 
 
@@ -329,38 +354,7 @@ signed int main(signed int argc, char** argv) {
 		return 1;
 	}
 
-	LanguageFile = appConfig.LanguageFile;
-	IPAddress = appConfig.IPAddress;
-	ServerPort = appConfig.ServerPort;
-	EnableWebUI = appConfig.EnableWebUI;
-	WebUIFile = appConfig.WebUIFile;
-	WebUIWebsitePath = appConfig.WebUIWebsitePath;
-	DefaultBdsInstanceId = appConfig.DefaultBdsInstanceId;
-	AutoStartDelaySeconds = appConfig.AutoStartDelaySeconds;
-	BdsInstances.clear();
-	for (const auto& item : appConfig.BdsInstances) {
-		BDSInstanceConfig cfg;
-		cfg.Id = item.Id;
-		cfg.Name = item.Name;
-		cfg.ExecutablePath = item.ExecutablePath;
-		cfg.WorkingDirectory = item.WorkingDirectory;
-		cfg.AutoStart = item.AutoStart;
-		cfg.UseCmd = item.UseCmd;
-		cfg.AutoBackup = item.AutoBackup;
-		cfg.BackupHour = item.BackupHour;
-		cfg.BackupMinute = item.BackupMinute;
-		cfg.BackupSecond = item.BackupSecond;
-		cfg.BackupFrom = item.BackupFrom;
-		cfg.BackupTo = item.BackupTo;
-		cfg.LogTag = item.LogTag;
-		BdsInstances.push_back(cfg);
-	}
-	UseQQBot = appConfig.UseQQBot;
-	QQIPAddress = appConfig.QQIPAddress;
-	QQClientPort = appConfig.QQClientPort;
-	QQServerPort = appConfig.QQServerPort;
-	OwnerQQ = appConfig.OwnerQQ;
-	QQGroup = appConfig.QQGroup;
+	ApplyLoadedConfig(appConfig);
 
 	if (BdsInstances.empty()) {
 		FAIL("BDS 实例列表为空，请检查 NIAHttpBOT.json 中 bds.Instances 配置");
@@ -375,12 +369,7 @@ signed int main(signed int argc, char** argv) {
 		FAIL("初始化 BDS 实例失败: " + configError);
 		return 1;
 	}
-
-	const auto dbInitResult = GetLocalDatabase().Initialize("./data/leveldb");
-	if (!dbInitResult.ok) {
-		FAIL("初始化本地数据库失败: " + dbInitResult.message);
-		return 1;
-	}
+	DefaultBdsInstanceId = GetDefaultServerInstance();
 
 	INFO("已成功读取配置文件");
 	if (LanguageFile.empty()) INFO("已使用默认语言");
@@ -421,38 +410,7 @@ signed int main(signed int argc, char** argv) {
 		if(req_json.HasParseError()||!req_json.HasMember("Name")||!req_json.HasMember("Type")
 			||!req_json["Name"].IsString()||!req_json["Type"].IsString()||req_json["Type"].GetStringLength()!=1) [[unlikely]]
 			return res.set_content("json data error", "text/plain");
-		AppCfg::Config currentCfg;
-		currentCfg.LanguageFile = LanguageFile;
-		currentCfg.IPAddress = IPAddress;
-		currentCfg.ServerPort = ServerPort;
-		currentCfg.EnableWebUI = EnableWebUI;
-		currentCfg.WebUIFile = WebUIFile;
-		currentCfg.WebUIWebsitePath = WebUIWebsitePath;
-		currentCfg.DefaultBdsInstanceId = DefaultBdsInstanceId;
-		currentCfg.AutoStartDelaySeconds = AutoStartDelaySeconds;
-		for (const auto& item : BdsInstances) {
-			AppCfg::BdsInstanceConfig cfgItem;
-			cfgItem.Id = item.Id;
-			cfgItem.Name = item.Name;
-			cfgItem.ExecutablePath = item.ExecutablePath;
-			cfgItem.WorkingDirectory = item.WorkingDirectory;
-			cfgItem.AutoStart = item.AutoStart;
-			cfgItem.UseCmd = item.UseCmd;
-			cfgItem.AutoBackup = item.AutoBackup;
-			cfgItem.BackupHour = item.BackupHour;
-			cfgItem.BackupMinute = item.BackupMinute;
-			cfgItem.BackupSecond = item.BackupSecond;
-			cfgItem.BackupFrom = item.BackupFrom;
-			cfgItem.BackupTo = item.BackupTo;
-			cfgItem.LogTag = item.LogTag;
-			currentCfg.BdsInstances.push_back(cfgItem);
-		}
-		currentCfg.UseQQBot = UseQQBot;
-		currentCfg.QQIPAddress = QQIPAddress;
-		currentCfg.QQClientPort = QQClientPort;
-		currentCfg.QQServerPort = QQServerPort;
-		currentCfg.OwnerQQ = OwnerQQ;
-		currentCfg.QQGroup = QQGroup;
+		const AppCfg::Config currentCfg = BuildCurrentConfigSnapshot();
 
 		std::string value;
 		const std::string name = req_json["Name"].GetString();
@@ -524,9 +482,6 @@ signed int main(signed int argc, char** argv) {
 	//初始化文件API
 	init_file_API(svr);
 
-	//初始化数据库API
-	init_db_API(svr);
-
 	//按实例自动启动服务器
 	int autoStartPending = 0;
 	for (const auto& item : BdsInstances) {
@@ -545,18 +500,20 @@ signed int main(signed int argc, char** argv) {
 		}
 	}
 
-	if(EnableWebUI | 1){
-		
-		WebUI webUI(WebUIWebsitePath, WebUIFile, &svr);
-		INFO("the server has been started in the address: "+IPAddress+":"+std::to_string(ServerPort)+WebUIWebsitePath);
-
-		INFO("the website file is in the path: " + WebUIFile);
-	}
-	
-
-
 	//监听终端命令输入
 	using CommandHandler = std::function<void(const std::vector<std::string>&)>;
+	auto printCommandResult = [](const std::string& instanceId, const std::string& result) {
+		std::istringstream resultStream(result);
+		std::string line;
+		bool printed = false;
+		while (std::getline(resultStream, line)) {
+			INFO("[" + instanceId + "] " + line);
+			printed = true;
+		}
+		if (!printed) {
+			INFO("[" + instanceId + "]");
+		}
+	};
 
     std::unordered_map<std::string, CommandHandler> commandMap;
 
@@ -567,7 +524,8 @@ signed int main(signed int argc, char** argv) {
 		std::cout << "  listserver - 列出已配置实例" << std::endl;
 		std::cout << "  use <id> - 切换默认实例" << std::endl;
 		std::cout << "  startserver <id> - 启动指定实例" << std::endl;
-		std::cout << "  mc <id> <command> - 向指定实例发送 mc 指令" << std::endl;
+		std::cout << "  mc <id> <command> - 向指定实例发送命令并显示回传" << std::endl;
+		std::cout << "  /<id> <command> - 直接向指定实例发送命令并显示回传" << std::endl;
 		std::cout << "  stopserver <id> - 关闭指定实例" << std::endl;
     };
 
@@ -576,7 +534,7 @@ signed int main(signed int argc, char** argv) {
         INFO("1s后重启程序..." );
         std::this_thread::sleep_for(std::chrono::seconds(1));
         #ifdef _WIN32
-			StopAllServers();
+			StopAllServersForExit();
 			STARTUPINFOA si2;
 			PROCESS_INFORMATION pi2;
 			ZeroMemory(&si2, sizeof(si2));
@@ -612,6 +570,7 @@ signed int main(signed int argc, char** argv) {
 			WARN("切换默认实例失败，未找到实例: " + args[1]);
 			return;
 		}
+		DefaultBdsInstanceId = GetDefaultServerInstance();
 		INFO("默认实例已切换到: " + args[1]);
 	};
 
@@ -623,7 +582,7 @@ signed int main(signed int argc, char** argv) {
 		StartServer(args[1]);
 	};
 
-	commandMap["mc"] = [](const std::vector<std::string>& args) {
+	commandMap["mc"] = [&printCommandResult](const std::vector<std::string>& args) {
 		if (args.size() < 3) {
 			WARN("mc 指令需要参数: <id> <command>");
 			return;
@@ -634,7 +593,7 @@ signed int main(signed int argc, char** argv) {
 			command += " " + args[i];
 		}
 		std::string result = runCommand(command, instanceId);
-		INFO("[" + instanceId + "] " + result);
+		printCommandResult(instanceId, result);
 	};
 
 	commandMap["whitelist"] = [](const std::vector<std::string>& args) {
@@ -674,7 +633,7 @@ signed int main(signed int argc, char** argv) {
 
     commandMap["stop"] = [](const std::vector<std::string>&) {
         INFO("1s后将关闭程序...");
-        StopAllServers();
+		StopAllServersForExit();
         #ifdef _WIN32
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			exit(0);
@@ -684,17 +643,8 @@ signed int main(signed int argc, char** argv) {
 		#endif
     };
 
-    commandMap["setcfg"] = [](const std::vector<std::string>& args) {
-        if (args.size() < 3) {
-            WARN("setcfg 指令需要两个参数: <cfgname> <cfgdata>");
-            return;
-        }
-        std::string cfgname = args[1];
-        std::string cfgdata = args[2];
-    };
-
 	// 启动输入监听线程
-	std::thread inputThread([&commandMap]() {
+	std::thread inputThread([&commandMap, &printCommandResult]() {
 		std::string line;
 		while (true) {
 			if (!std::getline(std::cin, line)) {
@@ -723,7 +673,8 @@ signed int main(signed int argc, char** argv) {
 				for (int i = 2; i < tokens.size(); i++) {
 					command += " " + tokens[i];
 				}
-				runCommand(command, instanceId);
+				std::string result = runCommand(command, instanceId);
+				printCommandResult(instanceId, result);
 				continue;
 			}
             auto it = commandMap.find(tokens[0]);

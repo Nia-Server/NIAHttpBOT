@@ -29,10 +29,6 @@ struct Config {
     std::string IPAddress = "127.0.0.1";
     int ServerPort = 2333;
 
-    bool EnableWebUI = false;
-    std::string WebUIFile = "./WebUI";
-    std::string WebUIWebsitePath = "/";
-
     std::string DefaultBdsInstanceId = "default";
     int AutoStartDelaySeconds = 5;
     std::vector<BdsInstanceConfig> BdsInstances { BdsInstanceConfig{} };

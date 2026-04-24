@@ -45,31 +45,6 @@ if(SUPPORTS_AVX2)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${AVX2_FLAG}")
 endif()
 
-include(FetchContent)
-set(LEVELDB_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(LEVELDB_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
-set(LEVELDB_INSTALL OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-	leveldb
-	GIT_REPOSITORY https://github.com/google/leveldb.git
-	GIT_TAG 1.23
-)
-FetchContent_MakeAvailable(leveldb)
-
-if(EXISTS "${leveldb_SOURCE_DIR}/util/env_posix.cc")
-	file(READ "${leveldb_SOURCE_DIR}/util/env_posix.cc" LEVELDB_ENV_POSIX_CC)
-	string(REPLACE "std::memory_order::memory_order_relaxed" "std::memory_order_relaxed" LEVELDB_ENV_POSIX_CC "${LEVELDB_ENV_POSIX_CC}")
-	file(WRITE "${leveldb_SOURCE_DIR}/util/env_posix.cc" "${LEVELDB_ENV_POSIX_CC}")
-endif()
-
-set_property(TARGET leveldb PROPERTY CXX_STANDARD 17)
-set_property(TARGET leveldb PROPERTY CXX_STANDARD_REQUIRED ON)
-set_property(TARGET leveldb PROPERTY CXX_EXTENSIONS OFF)
-
-if(MSVC)
-	set_property(TARGET leveldb PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
-
 file(GLOB_RECURSE SOURCE CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 include_directories(
@@ -78,7 +53,6 @@ include_directories(
 	./src/app
 	./src/common
 	./src/api/bds
-	./src/api/db
 	./src/api/file
 	./src/api/game
 	./src/bot/qq
@@ -87,7 +61,6 @@ include_directories(
 add_definitions(-D__PROJECT__="${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(${PROJECT} ${SOURCE})
-target_link_libraries(${PROJECT} PRIVATE leveldb)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	target_link_libraries(${PROJECT} PRIVATE

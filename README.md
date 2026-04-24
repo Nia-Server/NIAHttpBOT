@@ -23,7 +23,6 @@
 
 - 基于http可以实现对特定文件进行读写、创建以及删除等功能
 - 基于http搭配**NiaServer-Core**以及**NapCatQQ**可以实现QQ机器人与服务器联动功能
-- 内置基于 LevelDB 的本地轻量数据库，并提供完整 HTTP 数据库接口（见 `docs/本地数据库API.md`）
 
 ***
 
@@ -176,10 +175,7 @@ CheckNetIsolation.exe LoopbackExempt -a -p=S-1-15-2-424268864-5579737-879501358-
     "base": {
         "LanguageFile": "",
         "IPAddress": "127.0.0.1",
-        "ServerPort": 2333,
-        "EnableWebUI": false,
-        "WebUIFile": "./WebUI",
-        "WebUIWebsitePath": "/"
+        "ServerPort": 2333
     },
     "bds": {
         "DefaultInstanceId": "main",

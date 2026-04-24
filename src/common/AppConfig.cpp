@@ -139,9 +139,6 @@ bool LoadFromJsonFile(const std::string& path, Config& cfg, std::string& error) 
     if (!SetStringIfExists(base, "LanguageFile", loaded.LanguageFile, error)) return false;
     if (!SetStringIfExists(base, "IPAddress", loaded.IPAddress, error)) return false;
     if (!SetIntIfExists(base, "ServerPort", loaded.ServerPort, error)) return false;
-    if (!SetBoolIfExists(base, "EnableWebUI", loaded.EnableWebUI, error)) return false;
-    if (!SetStringIfExists(base, "WebUIFile", loaded.WebUIFile, error)) return false;
-    if (!SetStringIfExists(base, "WebUIWebsitePath", loaded.WebUIWebsitePath, error)) return false;
 
     if (!SetBoolIfExists(qqbot, "UseQQBot", loaded.UseQQBot, error)) return false;
     if (!SetStringIfExists(qqbot, "QQIPAddress", loaded.QQIPAddress, error)) return false;
@@ -206,9 +203,6 @@ bool SaveToJsonFile(const std::string& path, const Config& cfg, std::string& err
     base.AddMember("LanguageFile", rapidjson::Value(cfg.LanguageFile.c_str(), alloc), alloc);
     base.AddMember("IPAddress", rapidjson::Value(cfg.IPAddress.c_str(), alloc), alloc);
     base.AddMember("ServerPort", cfg.ServerPort, alloc);
-    base.AddMember("EnableWebUI", cfg.EnableWebUI, alloc);
-    base.AddMember("WebUIFile", rapidjson::Value(cfg.WebUIFile.c_str(), alloc), alloc);
-    base.AddMember("WebUIWebsitePath", rapidjson::Value(cfg.WebUIWebsitePath.c_str(), alloc), alloc);
     doc.AddMember("base", base, alloc);
 
     rapidjson::Value qqbot(rapidjson::kObjectType);
@@ -256,8 +250,7 @@ bool GetValueByType(const Config& cfg, const std::string& name, char type, std::
     switch (type) {
         case 'B': {
             bool value;
-            if (name == "EnableWebUI") value = cfg.EnableWebUI;
-            else if (name == "UseQQBot") value = cfg.UseQQBot;
+            if (name == "UseQQBot") value = cfg.UseQQBot;
             else return false;
             out = value ? "1" : "0";
             return true;
@@ -274,8 +267,6 @@ bool GetValueByType(const Config& cfg, const std::string& name, char type, std::
         case 'S': {
             if (name == "LanguageFile") out = cfg.LanguageFile;
             else if (name == "IPAddress") out = cfg.IPAddress;
-            else if (name == "WebUIFile") out = cfg.WebUIFile;
-            else if (name == "WebUIWebsitePath") out = cfg.WebUIWebsitePath;
             else if (name == "QQIPAddress") out = cfg.QQIPAddress;
             else if (name == "OwnerQQ") out = cfg.OwnerQQ;
             else if (name == "QQGroup") out = cfg.QQGroup;
